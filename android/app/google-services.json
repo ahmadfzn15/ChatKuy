@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "22079555664",
+    "project_id": "cashier-75540",
+    "storage_bucket": "cashier-75540.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:22079555664:android:6aa4df14a79f60a0c02955",
+        "android_client_info": {
+          "package_name": "com.example.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLI9EX9tERHVJd6kPavjF6NT0W-OCu_Co"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
