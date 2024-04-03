@@ -1,169 +1,215 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sioren/auth/auth.dart';
+import 'package:sioren/components/popup.dart';
 
 class Chat extends StatefulWidget {
-  const Chat({super.key});
+  const Chat({super.key, required this.id, required this.userId});
+  final String id;
+  final String userId;
 
   @override
   // ignore: library_private_types_in_public_api
   _ChatState createState() => _ChatState();
 }
 
+Route _goPage(Widget widget) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => widget,
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
+    opaque: false,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(1.0, 0.0);
+      const end = Offset.zero;
+      final tween = Tween(begin: begin, end: end)
+          .chain(CurveTween(curve: Curves.easeInOutExpo));
+      final offsetAnimation = animation.drive(tween);
+
+      return SlideTransition(
+        position: offsetAnimation,
+        child: child,
+      );
+    },
+  );
+}
+
 class _ChatState extends State<Chat> {
-  final TextEditingController _inputMessage = TextEditingController();
-  List<String> message = [];
+  final TextEditingController _message = TextEditingController();
 
-  void sendMessage() {
-    if (_inputMessage.text != "") {
-      message.add(_inputMessage.text);
-    }
-  }
+  Future<void> signOut() async {
+    await FirebaseAuth.instance.signOut();
+    await const FlutterSecureStorage().delete(key: "token");
 
-  XFile? _image;
-
-  void _openFileManager() async {
-    PermissionStatus status = await Permission.storage.request();
-
-    if (status.isGranted) {
-      XFile? pickImg =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
-      setState(() {
-        _image = pickImg;
-      });
-    } else {
+    Navigator.pushAndRemoveUntil(
       // ignore: use_build_context_synchronously
-      showCupertinoModalPopup(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-            title: const Text("Access denied"),
-            content: const Text("Please allow storage usage to upload images."),
-            actions: [
-              CupertinoDialogAction(
-                  isDefaultAction: true,
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Ok"))
-            ]),
-      );
-    }
-  }
+      context,
+      MaterialPageRoute(
+        builder: (context) {
+          return const Auth();
+        },
+      ),
+      (route) => false,
+    );
 
-  void _openCamera() async {
-    PermissionStatus status = await Permission.camera.request();
-
-    if (status.isGranted) {
-      XFile? pickImg =
-          await ImagePicker().pickImage(source: ImageSource.camera);
-      setState(() {
-        _image = pickImg;
-      });
-    } else {
-      // ignore: use_build_context_synchronously
-      showCupertinoModalPopup(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-            title: const Text("Access denied"),
-            content: const Text("Please allow camera to upload images."),
-            actions: [
-              CupertinoDialogAction(
-                  isDefaultAction: true,
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Ok"))
-            ]),
-      );
-    }
+    // ignore: use_build_context_synchronously
+    Popup().show(context, "Sign out Successfully", true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blueGrey.shade50,
       appBar: AppBar(
-          actions: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: PopupMenuButton(
-                icon: const Icon(Icons.menu),
-                itemBuilder: (context) {
-                  return [const PopupMenuItem(child: Text("Clear Chat"))];
-                },
-              ),
-            )
-          ],
-          elevation: 1,
-          surfaceTintColor: Colors.white,
-          shadowColor: Colors.black,
-          leadingWidth: 500,
-          leading: const Padding(
-            padding: EdgeInsets.all(8.0),
+        backgroundColor: Colors.purple.shade400,
+        foregroundColor: Colors.white,
+        elevation: 1,
+        shadowColor: Colors.grey,
+        surfaceTintColor: Colors.white,
+        title: TextButton(
+            onPressed: () {},
+            style: const ButtonStyle(
+                padding: MaterialStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 0, vertical: 10),
+            )),
+            child: const Text(
+              "Lusi Kuraisin",
+              style: TextStyle(fontSize: 18, color: Colors.white),
+            )),
+        titleSpacing: 0,
+        leadingWidth: 95,
+        leading: Padding(
+          padding: const EdgeInsets.all(4),
+          child: TextButton(
+              style: const ButtonStyle(
+                  padding: MaterialStatePropertyAll(EdgeInsets.zero)),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.chevron_left,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                  CircleAvatar(
+                    backgroundImage: AssetImage("assets/img/lusi.jpeg"),
+                  )
+                ],
+              )),
+        ),
+        actions: [
+          IconButton(
+              onPressed: () {
+                print("Hello");
+              },
+              icon: const Icon(Icons.call)),
+          MenuAnchor(
+              builder: (context, controller, child) {
+                return IconButton(
+                  onPressed: () {
+                    if (controller.isOpen) {
+                      controller.close();
+                    } else {
+                      controller.open();
+                    }
+                  },
+                  icon: const Icon(CupertinoIcons.ellipsis_vertical),
+                );
+              },
+              menuChildren: [
+                MenuItemButton(
+                    onPressed: () {
+                      signOut();
+                    },
+                    child: const Text("Sign out"))
+              ])
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: 30,
+              padding: const EdgeInsets.all(10),
+              itemBuilder: (context, index) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.8,
+                      child: const Card(
+                        elevation: 1,
+                        color: Colors.white,
+                        surfaceTintColor: Colors.white,
+                        child: Padding(
+                          padding: EdgeInsets.all(7),
+                          child: Text(
+                              "aksdgasdadgakgdaskhgasgdyasdjagdjasgydashdgyagdsagyjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjsdgahkggasdkyasgdjdsga?",
+                              style: TextStyle(
+                                  fontSize: 14, overflow: TextOverflow.clip)),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          Container(
+            padding:
+                const EdgeInsets.only(bottom: 10, left: 10, right: 10, top: 5),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Icon(Icons.chevron_left_rounded),
-                CircleAvatar(
-                  backgroundImage: AssetImage("/img/lusi.jpeg"),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Text("Lusi Kuraisin")
+                MenuAnchor(
+                    builder: (context, controller, child) {
+                      return IconButton(
+                        onPressed: () {
+                          if (controller.isOpen) {
+                            controller.close();
+                          } else {
+                            controller.open();
+                          }
+                        },
+                        color: Colors.purple.shade400,
+                        icon: const Icon(
+                          Icons.photo,
+                        ),
+                      );
+                    },
+                    menuChildren: const [
+                      MenuItemButton(child: Text("Gambar"))
+                    ]),
+                Expanded(
+                    child: CupertinoTextField(
+                  controller: _message,
+                  keyboardType: TextInputType.emailAddress,
+                  placeholder: "Type here . . .",
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(50),
+                    border:
+                        Border.all(color: const Color(0xFF94a3b8), width: 0.5),
+                  ),
+                )),
+                IconButton(
+                    onPressed: () {
+                      print("Hello");
+                    },
+                    color: Colors.purple.shade400,
+                    icon: const Icon(Icons.send))
               ],
             ),
-          )),
-      body: const SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Padding(
-          padding: EdgeInsets.all(10.0),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(5.0),
-                child: Text("Hello"),
-              ),
-            ),
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(5.0),
-                child: Text("Hello"),
-              ),
-            )
-          ]),
-        ),
+          ),
+        ],
       ),
-      bottomNavigationBar: BottomAppBar(
-          elevation: 15,
-          shadowColor: Colors.black,
-          height: 75,
-          surfaceTintColor: Colors.white,
-          child: TextField(
-            controller: _inputMessage,
-            style: const TextStyle(fontSize: 18),
-            decoration: InputDecoration(
-                contentPadding: const EdgeInsets.all(10),
-                hintText: "Type here...",
-                suffixIcon: GestureDetector(
-                    onTap: sendMessage, child: const Icon(Icons.send)),
-                icon: PopupMenuButton(
-                  offset: const Offset(0, -100),
-                  icon: const Icon(Icons.photo),
-                  itemBuilder: (context) {
-                    return [
-                      PopupMenuItem(
-                          onTap: _openFileManager,
-                          child: const Text("Pick Images")),
-                      PopupMenuItem(
-                          onTap: _openCamera, child: const Text("Open Camera"))
-                    ];
-                  },
-                ),
-                border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(10)))),
-          )),
     );
   }
 }

@@ -1,7 +1,10 @@
-import 'package:app/layout.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sioren/components/popup.dart';
+import 'package:sioren/layout.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key, required this.pageController});
@@ -12,21 +15,43 @@ class Register extends StatefulWidget {
   _RegisterState createState() => _RegisterState();
 }
 
+Route _goPage(Widget page) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: const Duration(milliseconds: 500),
+    reverseTransitionDuration: const Duration(milliseconds: 500),
+    opaque: false,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(1.0, 0.0);
+      const end = Offset.zero;
+      final tween = Tween(begin: begin, end: end)
+          .chain(CurveTween(curve: Curves.easeInOutExpo));
+      final offsetAnimation = animation.drive(tween);
+
+      return SlideTransition(
+        position: offsetAnimation,
+        child: child,
+      );
+    },
+  );
+}
+
 class _RegisterState extends State<Register> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordControllerConfirmation =
       TextEditingController();
   final FlutterSecureStorage storage = const FlutterSecureStorage();
   bool loading = false;
+  bool pwdNotSame = false;
   bool showPwd = false;
   bool showPwdConf = false;
 
   void _registerUser(BuildContext context) async {
     try {
-      // ignore: unused_local_variable
       loading = true;
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.value.text,
@@ -39,245 +64,311 @@ class _RegisterState extends State<Register> {
         password: _passwordController.value.text,
       );
 
-      if (userCredential.user != null) {
-        await storage.write(key: "uid", value: userCredential.user!.uid);
+      await FirebaseFirestore.instance.collection('users').add({
+        "uid": userCredential.user!.uid,
+        "photo": null,
+        "name": _nameController.text,
+        "email": _emailController.text,
+        "telephone_number": null,
+        "bio": null,
+        "created_at": Timestamp.now()
+      });
 
-        const snackBar = SnackBar(
-            content: Text(
-              "Sign up Successfully",
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.deepOrange,
-            duration: Duration(seconds: 3));
+      if (userCredential.user != null) {
+        final String? token = await userCredential.user!.getIdToken();
+        await storage.write(key: "token", value: token);
+
+        Navigator.pushAndRemoveUntil(
+          // ignore: use_build_context_synchronously
+          context,
+          _goPage(Layout(user: userCredential.user)),
+          (route) => false,
+        );
+
         // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        Popup().show(context, "Sign up Successfully", true);
         setState(() {
           _emailController.clear();
           _passwordController.clear();
+          _passwordControllerConfirmation.clear();
         });
-        // ignore: use_build_context_synchronously
-        Navigator.pushReplacement(context, MaterialPageRoute(
-          builder: (context) {
-            return const Layout();
-          },
-        ));
         loading = false;
       } else {
-        SnackBar snackBar = const SnackBar(
-          content: Text(
-            "An unexpected error occurred",
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        );
+        setState(() {
+          _emailController.clear();
+          _passwordController.clear();
+          _passwordControllerConfirmation.clear();
+        });
+        loading = false;
         // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        Popup().show(context, "Sign up failed", false);
       }
     } on FirebaseAuthException catch (e) {
+      setState(() {
+        _emailController.clear();
+        _passwordController.clear();
+        _passwordControllerConfirmation.clear();
+      });
       loading = false;
-      SnackBar snackBar = SnackBar(
-        content: Text(
-          e.message!,
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      );
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      Popup().show(context, e.message!, false);
     } catch (e) {
+      setState(() {
+        _emailController.clear();
+        _passwordController.clear();
+        _passwordControllerConfirmation.clear();
+      });
       loading = false;
-      SnackBar snackBar = const SnackBar(
-        content: Text(
-          "An unexpected error occurred",
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      );
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      Popup().show(context, "An unexpected error occurred", false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.orange,
       key: _scaffoldKey,
-      body: Center(
-        child: Form(
-            key: _formKey,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 160,
-                    height: 80,
-                    child: Image.asset("assets/img/logo.png"),
-                  ),
-                  const SizedBox(
-                    height: 40,
-                  ),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text("Email",
+      body: SingleChildScrollView(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                child: Column(
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Welcome",
                           style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 6,
-                  ),
-                  TextFormField(
-                    keyboardType: TextInputType.emailAddress,
-                    controller: _emailController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: "Type your email address",
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.person),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                          borderSide: BorderSide.none,
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text("Password",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 6,
-                  ),
-                  TextFormField(
-                    controller: _passwordController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    obscureText: !showPwd,
-                    decoration: InputDecoration(
-                      hintText: "Type your password",
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              showPwd = !showPwd;
-                            });
-                          },
-                          child: const Icon(Icons.remove_red_eye)),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                          borderSide: BorderSide.none,
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text("Password Confirmation",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 6,
-                  ),
-                  TextFormField(
-                    controller: _passwordControllerConfirmation,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    obscureText: !showPwdConf,
-                    decoration: InputDecoration(
-                      hintText: "Type your password",
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              showPwdConf = !showPwdConf;
-                            });
-                          },
-                          child: const Icon(Icons.remove_red_eye)),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                          borderSide: BorderSide.none,
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  const SizedBox(height: 25),
-                  SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton(
-                        onPressed: () => loading
-                            ? null
-                            : {
-                                if (_formKey.currentState!.validate())
-                                  _registerUser(context)
-                              },
-                        style: const ButtonStyle(
-                            backgroundColor:
-                                MaterialStatePropertyAll(Colors.white30),
-                            foregroundColor:
-                                MaterialStatePropertyAll(Colors.white)),
-                        child: const Text("Sign up",
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
-                      )),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          widget.pageController.previousPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOutExpo);
-                        },
-                        child: const Text(
-                          "Already account?",
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                              fontSize: 25, fontWeight: FontWeight.w800),
                         ),
-                      )
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text("Name",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 6,
+                    ),
+                    CupertinoTextField(
+                      controller: _nameController,
+                      prefix: const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.person),
+                      ),
+                      placeholder: "Enter your name",
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFF94a3b8), width: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text("Email",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 6,
+                    ),
+                    CupertinoTextField(
+                      controller: _emailController,
+                      prefix: const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.email),
+                      ),
+                      placeholder: "Enter your email",
+                      keyboardType: TextInputType.emailAddress,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFF94a3b8), width: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text("Password",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 6,
+                    ),
+                    CupertinoTextField(
+                      controller: _passwordController,
+                      prefix: const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.lock),
+                      ),
+                      obscuringCharacter: "*",
+                      onChanged: (value) {
+                        if (_passwordControllerConfirmation.text.isNotEmpty) {
+                          if (value != _passwordControllerConfirmation.text) {
+                            setState(() {
+                              pwdNotSame = true;
+                            });
+                          } else {
+                            setState(() {
+                              pwdNotSame = false;
+                            });
+                          }
+                        }
+                      },
+                      suffix: Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                showPwd = !showPwd;
+                              });
+                            },
+                            child: showPwd
+                                ? const Icon(CupertinoIcons.eye_fill)
+                                : const Icon(CupertinoIcons.eye_slash_fill)),
+                      ),
+                      placeholder: "Enter your password",
+                      obscureText: !showPwd,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFF94a3b8), width: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text("Repeat Password",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 6,
+                    ),
+                    CupertinoTextField(
+                      controller: _passwordControllerConfirmation,
+                      prefix: const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.lock),
+                      ),
+                      obscuringCharacter: "*",
+                      onChanged: (value) {
+                        if (_passwordController.text.isNotEmpty) {
+                          if (value != _passwordController.text) {
+                            setState(() {
+                              pwdNotSame = true;
+                            });
+                          } else {
+                            setState(() {
+                              pwdNotSame = false;
+                            });
+                          }
+                        }
+                      },
+                      suffix: Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                showPwdConf = !showPwdConf;
+                              });
+                            },
+                            child: showPwdConf
+                                ? const Icon(CupertinoIcons.eye_fill)
+                                : const Icon(CupertinoIcons.eye_slash_fill)),
+                      ),
+                      placeholder: "Enter again your password",
+                      obscureText: !showPwdConf,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFF94a3b8), width: 0.5),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 5,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        pwdNotSame
+                            ? const Text(
+                                "Password is't the same",
+                                style: TextStyle(color: Colors.red),
+                                textAlign: TextAlign.start,
+                              )
+                            : const Text("")
+                      ],
+                    ),
+                    const SizedBox(height: 25),
+                    SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: CupertinoButton(
+                          onPressed: () => !loading && !pwdNotSame
+                              ? _registerUser(context)
+                              : null,
+                          color: Colors.purple.shade400,
+                          child: const Text("Sign up",
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                        )),
+                    const SizedBox(
+                      height: 30,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Already account? ",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        GestureDetector(
+                          onTap: () {
+                            widget.pageController.previousPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOutExpo);
+                          },
+                          child: const Text(
+                            "Sign in",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ],
+          ),
+        ),
       ),
     );
   }
