@@ -52,8 +52,10 @@ class _FriendState extends State<Friend> {
       loading = true;
     });
 
-    QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance.collection('users').get();
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('uid', isNotEqualTo: widget.user!.uid)
+        .get();
 
     setState(() {
       friend.clear();
@@ -73,33 +75,46 @@ class _FriendState extends State<Friend> {
 
     String searchValue = value.toLowerCase();
 
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where("name", isGreaterThanOrEqualTo: searchValue)
-        .where("name", isLessThanOrEqualTo: "$searchValue\uf8ff")
-        .get();
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('uid', isNotEqualTo: widget.user!.uid)
+          .where("name", isGreaterThanOrEqualTo: searchValue)
+          .where("name", isLessThanOrEqualTo: "$searchValue\uf8ff")
+          .get();
 
-    setState(() {
-      friend.clear();
-      // friend.addAll(querySnapshot.docs.map((e) => e.data()));
-
-      loading = false;
-    });
+      setState(() {
+        friend.clear();
+        friend.addAll(querySnapshot.docs.map((doc) {
+          return FriendModel.fromJson(doc.data() as Map<String, dynamic>);
+        }).toList());
+      });
+    } catch (e) {
+      print("Error fetching friends: $e");
+    } finally {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   Future<void> goToChat(String id) async {
     final checkRoom = await FirebaseFirestore.instance
         .collection('chatRoom')
-        .where("participants", isEqualTo: [widget.user!.uid, id]).get();
+        .where("participants", arrayContains: widget.user!.uid)
+        .get();
 
-    if (checkRoom.size != 0) {
+    final filterRoom = checkRoom.docs.where((element) {
+      List participants = element['participants'];
+      return participants.contains(id);
+    }).toList();
+
+    if (filterRoom.isNotEmpty) {
       Navigator.push(
           // ignore: use_build_context_synchronously
           context,
-          _goPage(Chat(
-            id: checkRoom.docs.map((e) => e.id).first,
-            userId: id,
-          )));
+          _goPage(
+              Chat(id: filterRoom.first.id, userId: id, user: widget.user)));
     } else {
       var res = await FirebaseFirestore.instance.collection('chatRoom').add({
         "participants": [widget.user!.uid, id],
@@ -107,6 +122,8 @@ class _FriendState extends State<Friend> {
         "reader": [],
         "pinned_id": [],
         "deleted_id": [],
+        "updated_at": null,
+        "created_at": Timestamp.now()
       });
 
       // ignore: use_build_context_synchronously
@@ -117,6 +134,7 @@ class _FriendState extends State<Friend> {
           _goPage(Chat(
             id: res.id,
             userId: id,
+            user: widget.user,
           )));
     }
   }

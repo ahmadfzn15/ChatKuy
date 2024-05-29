@@ -2,12 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:provider/provider.dart';
 import 'package:sioren/auth/auth.dart';
 import 'package:sioren/components/popup.dart';
 import 'package:sioren/group.dart';
 import 'package:sioren/home.dart';
-import 'package:sioren/model/selection.dart';
 import 'package:sioren/setting.dart';
 import 'package:sioren/story.dart';
 
@@ -70,7 +68,6 @@ class _LayoutState extends State<Layout> {
     setState(() {
       _currentIndex = index;
     });
-    Provider.of<Selection>(context, listen: false).setSelected(false);
   }
 
   Future<void> signOut() async {
@@ -94,82 +91,50 @@ class _LayoutState extends State<Layout> {
       appBar: AppBar(
         backgroundColor: Colors.purple.shade400,
         foregroundColor: Colors.white,
-        title: Consumer<Selection>(
-          builder: (context, value, child) {
-            if (value.isSelected) {
-              return Checkbox(
-                activeColor: Colors.purple.shade400,
-                value: false,
-                onChanged: (value) {},
-              );
-            } else {
-              return const Text(
-                "ChatKuyy",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              );
-            }
-          },
+        title: const Text(
+          "ChatKuy",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Consumer<Selection>(
-              builder: (context, value, child) {
-                if (value.isSelected) {
-                  return TextButton(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Wrap(
+                direction: Axis.horizontal,
+                children: [
+                  IconButton(
                       onPressed: () {
-                        final selectionModel =
-                            Provider.of<Selection>(context, listen: false);
-                        selectionModel.setSelected(false);
+                        setState(() {
+                          searchBar = !searchBar;
+                        });
                       },
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.white),
-                      ));
-                } else {
-                  return Wrap(
-                    direction: Axis.horizontal,
-                    children: [
-                      IconButton(
+                      icon: const Icon(CupertinoIcons.search)),
+                  MenuAnchor(
+                      builder: (context, controller, child) {
+                        return IconButton(
                           onPressed: () {
-                            setState(() {
-                              searchBar = !searchBar;
-                            });
+                            if (controller.isOpen) {
+                              controller.close();
+                            } else {
+                              controller.open();
+                            }
                           },
-                          icon: const Icon(CupertinoIcons.search)),
-                      MenuAnchor(
-                          builder: (context, controller, child) {
-                            return IconButton(
-                              onPressed: () {
-                                if (controller.isOpen) {
-                                  controller.close();
-                                } else {
-                                  controller.open();
-                                }
-                              },
-                              icon:
-                                  const Icon(CupertinoIcons.ellipsis_vertical),
-                            );
-                          },
-                          menuChildren: [
-                            MenuItemButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                      context, _goPage(const Setting()));
-                                },
-                                child: const Text("Setting")),
-                            MenuItemButton(
-                                onPressed: () {
-                                  signOut();
-                                },
-                                child: const Text("Sign out")),
-                          ]),
-                    ],
-                  );
-                }
-              },
-            ),
-          )
+                          icon: const Icon(CupertinoIcons.ellipsis_vertical),
+                        );
+                      },
+                      menuChildren: [
+                        MenuItemButton(
+                            onPressed: () {
+                              Navigator.push(context, _goPage(const Setting()));
+                            },
+                            child: const Text("Setting")),
+                        MenuItemButton(
+                            onPressed: () {
+                              signOut();
+                            },
+                            child: const Text("Sign out")),
+                      ]),
+                ],
+              ))
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

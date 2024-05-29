@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +7,11 @@ import 'package:sioren/auth/auth.dart';
 import 'package:sioren/components/popup.dart';
 
 class Chat extends StatefulWidget {
-  const Chat({super.key, required this.id, required this.userId});
+  const Chat(
+      {super.key, required this.id, required this.userId, required this.user});
   final String id;
   final String userId;
+  final User? user;
 
   @override
   // ignore: library_private_types_in_public_api
@@ -38,24 +41,80 @@ Route _goPage(Widget widget) {
 
 class _ChatState extends State<Chat> {
   final TextEditingController _message = TextEditingController();
+  Map<String, dynamic>? user;
+  bool loading = false;
+  List<Map<String, dynamic>> messages = [];
 
-  Future<void> signOut() async {
-    await FirebaseAuth.instance.signOut();
-    await const FlutterSecureStorage().delete(key: "token");
+  @override
+  void initState() {
+    super.initState();
 
-    Navigator.pushAndRemoveUntil(
-      // ignore: use_build_context_synchronously
-      context,
-      MaterialPageRoute(
-        builder: (context) {
-          return const Auth();
-        },
-      ),
-      (route) => false,
-    );
+    getData();
+    fetchMessages();
+  }
 
-    // ignore: use_build_context_synchronously
-    Popup().show(context, "Sign out Successfully", true);
+  Future<void> getData() async {
+    setState(() {
+      loading = true;
+    });
+
+    try {
+      QuerySnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .where("uid", isEqualTo: widget.userId)
+          .get();
+      var data = userDoc.docs.first.data() as Map<String, dynamic>;
+
+      setState(() {
+        user = null;
+        user = data;
+        loading = false;
+      });
+    } catch (e) {
+      print('Error getting user data: $e');
+    }
+  }
+
+  void fetchMessages() {
+    FirebaseFirestore.instance
+        .collection('message')
+        .where("room_id", isEqualTo: widget.id)
+        .orderBy('created_at')
+        .snapshots()
+        .listen((snapshot) {
+      setState(() {
+        messages = snapshot.docs.map((doc) => doc.data()).toList();
+      });
+    });
+  }
+
+  Future<void> updateStatusRoom() async {
+    if (messages.length == 1) {
+      await FirebaseFirestore.instance
+          .collection('chatRoom')
+          .doc(widget.id)
+          .update({"active": true});
+    }
+
+    await FirebaseFirestore.instance
+        .collection('chatRoom')
+        .doc(widget.id)
+        .update({"updated_at": Timestamp.now()});
+  }
+
+  Future<void> sendMessage() async {
+    await FirebaseFirestore.instance.collection("message").add({
+      "room_id": widget.id,
+      "sender_id": widget.user!.uid,
+      "message": _message.text,
+      "readed": false,
+      "deleted_id": [],
+      "created_at": Timestamp.now()
+    }).then((value) async {
+      _message.clear();
+      fetchMessages();
+      await updateStatusRoom();
+    });
   }
 
   @override
@@ -74,9 +133,9 @@ class _ChatState extends State<Chat> {
                 padding: MaterialStatePropertyAll(
               EdgeInsets.symmetric(horizontal: 0, vertical: 10),
             )),
-            child: const Text(
-              "Lusi Kuraisin",
-              style: TextStyle(fontSize: 18, color: Colors.white),
+            child: Text(
+              user != null ? user!['name'] : "",
+              style: const TextStyle(fontSize: 18, color: Colors.white),
             )),
         titleSpacing: 0,
         leadingWidth: 95,
@@ -123,7 +182,7 @@ class _ChatState extends State<Chat> {
               menuChildren: [
                 MenuItemButton(
                     onPressed: () {
-                      signOut();
+                      // signOut();
                     },
                     child: const Text("Sign out"))
               ])
@@ -134,23 +193,25 @@ class _ChatState extends State<Chat> {
           Expanded(
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: 30,
+              itemCount: messages.length,
               padding: const EdgeInsets.all(10),
               itemBuilder: (context, index) {
                 return Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment:
+                      messages[index]['sender_id'] == widget.userId
+                          ? MainAxisAlignment.start
+                          : MainAxisAlignment.end,
                   children: [
                     SizedBox(
                       width: MediaQuery.of(context).size.width * 0.8,
-                      child: const Card(
+                      child: Card(
                         elevation: 1,
                         color: Colors.white,
                         surfaceTintColor: Colors.white,
                         child: Padding(
-                          padding: EdgeInsets.all(7),
-                          child: Text(
-                              "aksdgasdadgakgdaskhgasgdyasdjagdjasgydashdgyagdsagyjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjsdgahkggasdkyasgdjdsga?",
-                              style: TextStyle(
+                          padding: const EdgeInsets.all(7),
+                          child: Text(messages[index]['message'],
+                              style: const TextStyle(
                                   fontSize: 14, overflow: TextOverflow.clip)),
                         ),
                       ),
@@ -201,7 +262,7 @@ class _ChatState extends State<Chat> {
                 )),
                 IconButton(
                     onPressed: () {
-                      print("Hello");
+                      sendMessage();
                     },
                     color: Colors.purple.shade400,
                     icon: const Icon(Icons.send))

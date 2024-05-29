@@ -3,11 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:sioren/auth/auth.dart';
 import 'package:sioren/firebase_options.dart';
 import 'package:sioren/layout.dart';
-import 'package:sioren/model/selection.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,10 +13,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => Selection(),
-      child: const MainApp(),
-    ),
+    const MainApp(),
   );
 }
 
@@ -36,7 +31,7 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "SiOren",
+      title: "ChatKuy",
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       theme: ThemeData(
