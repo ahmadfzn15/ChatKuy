@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sioren/auth/auth.dart';
+import 'package:sioren/etc/messaging.dart';
 import 'package:sioren/firebase_options.dart';
 import 'package:sioren/layout.dart';
 
@@ -12,6 +13,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await Messaging().initMessaging();
   runApp(
     const MainApp(),
   );

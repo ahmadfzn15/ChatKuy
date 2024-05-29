@@ -2,9 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:sioren/auth/auth.dart';
-import 'package:sioren/components/popup.dart';
+import 'package:sioren/etc/format_time.dart';
 
 class Chat extends StatefulWidget {
   const Chat(
@@ -42,7 +40,7 @@ Route _goPage(Widget widget) {
 class _ChatState extends State<Chat> {
   final TextEditingController _message = TextEditingController();
   Map<String, dynamic>? user;
-  bool loading = false;
+  bool loading = true;
   List<Map<String, dynamic>> messages = [];
 
   @override
@@ -54,10 +52,6 @@ class _ChatState extends State<Chat> {
   }
 
   Future<void> getData() async {
-    setState(() {
-      loading = true;
-    });
-
     try {
       QuerySnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -84,6 +78,7 @@ class _ChatState extends State<Chat> {
         .listen((snapshot) {
       setState(() {
         messages = snapshot.docs.map((doc) => doc.data()).toList();
+        loading = false;
       });
     });
   }
@@ -103,18 +98,21 @@ class _ChatState extends State<Chat> {
   }
 
   Future<void> sendMessage() async {
-    await FirebaseFirestore.instance.collection("message").add({
-      "room_id": widget.id,
-      "sender_id": widget.user!.uid,
-      "message": _message.text,
-      "readed": false,
-      "deleted_id": [],
-      "created_at": Timestamp.now()
-    }).then((value) async {
-      _message.clear();
-      fetchMessages();
-      await updateStatusRoom();
-    });
+    if (_message.text != "") {
+      await FirebaseFirestore.instance.collection("message").add({
+        "room_id": widget.id,
+        "sender_id": widget.user!.uid,
+        "receipent_id": widget.userId,
+        "message": _message.text,
+        "readed": false,
+        "deleted_id": [],
+        "created_at": Timestamp.now()
+      }).then((value) async {
+        _message.clear();
+        fetchMessages();
+        await updateStatusRoom();
+      });
+    }
   }
 
   @override
@@ -179,47 +177,73 @@ class _ChatState extends State<Chat> {
                   icon: const Icon(CupertinoIcons.ellipsis_vertical),
                 );
               },
-              menuChildren: [
-                MenuItemButton(
-                    onPressed: () {
-                      // signOut();
-                    },
-                    child: const Text("Sign out"))
-              ])
+              menuChildren: const [])
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: messages.length,
-              padding: const EdgeInsets.all(10),
-              itemBuilder: (context, index) {
-                return Row(
-                  mainAxisAlignment:
-                      messages[index]['sender_id'] == widget.userId
-                          ? MainAxisAlignment.start
-                          : MainAxisAlignment.end,
-                  children: [
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      child: Card(
-                        elevation: 1,
-                        color: Colors.white,
-                        surfaceTintColor: Colors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(7),
-                          child: Text(messages[index]['message'],
-                              style: const TextStyle(
-                                  fontSize: 14, overflow: TextOverflow.clip)),
-                        ),
-                      ),
+            child: loading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.purple,
                     ),
-                  ],
-                );
-              },
-            ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: messages.length,
+                    padding: const EdgeInsets.all(10),
+                    itemBuilder: (context, index) {
+                      return Row(
+                        mainAxisAlignment:
+                            messages[index]['sender_id'] == widget.userId
+                                ? MainAxisAlignment.start
+                                : MainAxisAlignment.end,
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.8),
+                            child: Card(
+                              elevation: 1,
+                              color: Colors.white,
+                              surfaceTintColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.only(
+                                    topLeft: messages[index]['sender_id'] ==
+                                            widget.userId
+                                        ? Radius.zero
+                                        : const Radius.circular(15),
+                                    topRight: messages[index]['sender_id'] !=
+                                            widget.userId
+                                        ? Radius.zero
+                                        : const Radius.circular(15),
+                                    bottomLeft: const Radius.circular(15),
+                                    bottomRight: const Radius.circular(15)),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(7),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(messages[index]['message'],
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            overflow: TextOverflow.clip)),
+                                    Text(
+                                        formatTime(
+                                            messages[index]['created_at']),
+                                        style: const TextStyle(
+                                            fontSize: 10,
+                                            overflow: TextOverflow.clip)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
           ),
           Container(
             padding:

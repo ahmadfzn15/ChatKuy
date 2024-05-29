@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:sioren/chat.dart';
+import 'package:sioren/etc/format_time.dart';
 import 'package:sioren/friend.dart';
 
 class Home extends StatefulWidget {
@@ -69,12 +71,28 @@ class _HomeState extends State<Home> {
         .collection('message')
         .where("room_id", isEqualTo: chatRoom['id'])
         .orderBy("created_at", descending: true)
+        .limit(1)
         .get();
 
     if (messageDoc.docs.isNotEmpty) {
       return messageDoc.docs.first.data() as Map<String, dynamic>;
     } else {
       return {"message": "No message available"};
+    }
+  }
+
+  Future<String> getUnreadMessage(chatRoom) async {
+    QuerySnapshot messageDoc = await FirebaseFirestore.instance
+        .collection('message')
+        .where("room_id", isEqualTo: chatRoom['id'])
+        .where("sender_id", isNotEqualTo: widget.user!.uid)
+        .where("readed", isEqualTo: false)
+        .get();
+
+    if (messageDoc.docs.isNotEmpty) {
+      return messageDoc.docs.length.toString();
+    } else {
+      return "0";
     }
   }
 
@@ -132,21 +150,26 @@ class _HomeState extends State<Home> {
                       chatRoom = {...chatRoom, "selected": false, "id": chatId};
 
                       return FutureBuilder<Map<String, dynamic>>(
-                        future: Future.wait(
-                                [getUser(chatRoom), getMessage(chatRoom)])
-                            .then((List<dynamic> value) {
-                          return value.asMap().map((index, data) {
-                            return MapEntry(
-                                index == 0 ? 'user' : 'message', data);
-                          });
+                        future: Future.wait([
+                          getUser(chatRoom),
+                          getMessage(chatRoom),
+                          getUnreadMessage(chatRoom)
+                        ]).then((List<dynamic> value) {
+                          return {
+                            'user': value[0],
+                            'message': value[1],
+                            'unread': value[2]
+                          };
                         }),
-                        builder: (context, snapshot) {
+                        builder: (context,
+                            AsyncSnapshot<Map<String, dynamic>> snapshot) {
                           if (!snapshot.hasData || snapshot.hasError) {
                             return Container();
                           }
 
                           var user = snapshot.data!['user']!;
                           var message = snapshot.data!['message']!;
+                          var unread = snapshot.data!['unread']!;
 
                           return ListTile(
                             onTap: () {
@@ -159,14 +182,28 @@ class _HomeState extends State<Home> {
                                 )),
                               );
                             },
-                            title: Text(user['name'] ?? "Unknown User"),
-                            subtitle: Text(message['message'] ?? "No Message"),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(user['name'] ?? "Unknown User"),
+                                Text(formatTime(message['created_at'] ?? ""),
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        overflow: TextOverflow.clip))
+                              ],
+                            ),
+                            subtitle: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(message['message'] ?? ""),
+                              ],
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 5, horizontal: 10),
                             leading: GestureDetector(
                               onTap: () {},
                               child: const CircleAvatar(
-                                radius: 30,
+                                radius: 25,
                                 backgroundImage:
                                     AssetImage("assets/img/lusi.jpeg"),
                               ),

@@ -44,57 +44,63 @@ class _FriendState extends State<Friend> {
   void initState() {
     super.initState();
 
-    getData();
+    // getData();
   }
 
-  Future<void> getData() async {
-    setState(() {
-      loading = true;
-    });
+  // Future<void> getData() async {
+  //   setState(() {
+  //     loading = true;
+  //   });
 
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('uid', isNotEqualTo: widget.user!.uid)
-        .get();
+  //   QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  //       .collection('users')
+  //       .where('uid', isNotEqualTo: widget.user!.uid)
+  //       .get();
 
-    setState(() {
-      friend.clear();
-      friend.addAll(querySnapshot.docs
-          .map((doc) => FriendModel.fromJson(
-              {if (doc.data() != null) ...doc.data() as Map<String, dynamic>}))
-          .toList());
+  //   setState(() {
+  //     friend.clear();
+  //     friend.addAll(querySnapshot.docs
+  //         .map((doc) => FriendModel.fromJson(
+  //             {if (doc.data() != null) ...doc.data() as Map<String, dynamic>}))
+  //         .toList());
 
-      loading = false;
-    });
-  }
+  //     loading = false;
+  //   });
+  // }
 
   Future<void> searchFriend(String value) async {
     setState(() {
       loading = true;
     });
 
-    String searchValue = value.toLowerCase();
+    if (_search.text == "") {
+      friend.clear();
+    } else {
+      String searchValue = value.toLowerCase();
 
-    try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('uid', isNotEqualTo: widget.user!.uid)
-          .where("name", isGreaterThanOrEqualTo: searchValue)
-          .where("name", isLessThanOrEqualTo: "$searchValue\uf8ff")
-          .get();
+      try {
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('uid', isNotEqualTo: widget.user!.uid)
+            .get();
 
-      setState(() {
-        friend.clear();
-        friend.addAll(querySnapshot.docs.map((doc) {
-          return FriendModel.fromJson(doc.data() as Map<String, dynamic>);
-        }).toList());
-      });
-    } catch (e) {
-      print("Error fetching friends: $e");
-    } finally {
-      setState(() {
-        loading = false;
-      });
+        setState(() {
+          friend.clear();
+          for (var doc in querySnapshot.docs) {
+            var data = doc.data() as Map<String, dynamic>;
+            var name = (data['name'] as String).toLowerCase();
+            if (name.contains(searchValue)) {
+              friend.add(FriendModel.fromJson(data));
+            }
+          }
+        });
+      } catch (e) {
+        print("Error fetching friends: $e");
+      } finally {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -110,6 +116,8 @@ class _FriendState extends State<Friend> {
     }).toList();
 
     if (filterRoom.isNotEmpty) {
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context);
       Navigator.push(
           // ignore: use_build_context_synchronously
           context,

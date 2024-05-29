@@ -40,30 +40,6 @@ class _GroupState extends State<Group> {
       "message": "Ppp",
       "selected": false
     },
-    {
-      "foto": "assets/img/lusi.jpeg",
-      "name": "Lusi Kuraisin",
-      "message": "Ppp",
-      "selected": false
-    },
-    {
-      "foto": "assets/img/lusi.jpeg",
-      "name": "Lusi Kuraisin",
-      "message": "Ppp",
-      "selected": false
-    },
-    {
-      "foto": "assets/img/lusi.jpeg",
-      "name": "Lusi Kuraisin",
-      "message": "Ppp",
-      "selected": false
-    },
-    {
-      "foto": "assets/img/lusi.jpeg",
-      "name": "Lusi Kuraisin",
-      "message": "Ppp",
-      "selected": false
-    },
   ];
   bool _select = false;
 
