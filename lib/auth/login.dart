@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -59,6 +61,7 @@ class _LoginState extends State<Login> {
       if (userCredential.user != null) {
         final String? token = await userCredential.user!.getIdToken();
         await storage.write(key: "token", value: token);
+        saveTokenToDatabase(userCredential.user!.uid);
 
         Navigator.pushAndRemoveUntil(
           // ignore: use_build_context_synchronously
@@ -97,6 +100,24 @@ class _LoginState extends State<Login> {
       });
       // ignore: use_build_context_synchronously
       Popup().show(context, "An unexpected error occurred", false);
+    }
+  }
+
+  Future<void> saveTokenToDatabase(String userId) async {
+    String? token = await FirebaseMessaging.instance.getToken();
+
+    if (token != null) {
+      var tokensRef = await FirebaseFirestore.instance
+          .collection('users')
+          .where("uid", isEqualTo: userId)
+          .get();
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(tokensRef.docs.first.id)
+          .update({
+        'fcmToken': FieldValue.arrayUnion([token]),
+      });
     }
   }
 

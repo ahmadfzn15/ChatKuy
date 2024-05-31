@@ -7,7 +7,7 @@ import 'package:sioren/components/popup.dart';
 import 'package:sioren/group.dart';
 import 'package:sioren/home.dart';
 import 'package:sioren/setting.dart';
-import 'package:sioren/story.dart';
+import 'package:sioren/reminder.dart';
 
 class Layout extends StatefulWidget {
   const Layout({super.key, required this.user});
@@ -50,7 +50,7 @@ class _LayoutState extends State<Layout> {
     super.initState();
 
     page = [
-      Story(user: widget.user),
+      Reminder(user: widget.user),
       Home(user: widget.user),
       Group(user: widget.user)
     ];
@@ -145,9 +145,9 @@ class _LayoutState extends State<Layout> {
           unselectedItemColor: Colors.white70,
           items: const [
             BottomNavigationBarItem(
-                label: "Story",
-                activeIcon: Icon(CupertinoIcons.book_fill),
-                icon: Icon(CupertinoIcons.book)),
+                label: "Reminder",
+                activeIcon: Icon(CupertinoIcons.bell_fill),
+                icon: Icon(CupertinoIcons.bell)),
             BottomNavigationBarItem(
                 label: "Chat",
                 activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
