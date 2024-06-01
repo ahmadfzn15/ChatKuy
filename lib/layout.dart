@@ -2,9 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get/get.dart';
 import 'package:sioren/auth/auth.dart';
 import 'package:sioren/components/popup.dart';
-import 'package:sioren/group.dart';
+import 'package:sioren/controller/reminder_controller.dart';
 import 'package:sioren/home.dart';
 import 'package:sioren/setting.dart';
 import 'package:sioren/reminder.dart';
@@ -40,19 +41,18 @@ Route _goPage(Widget page) {
 }
 
 class _LayoutState extends State<Layout> {
-  int _currentIndex = 1;
+  final ReminderController reminderController = Get.put(ReminderController());
+  final PageController _pageController = PageController(initialPage: 0);
+  int _currentIndex = 0;
   bool searchBar = false;
-  final PageController _pageController = PageController(initialPage: 1);
   List<Widget> page = [];
 
   @override
-  initState() {
+  void initState() {
     super.initState();
-
     page = [
-      Reminder(user: widget.user),
       Home(user: widget.user),
-      Group(user: widget.user)
+      Reminder(user: widget.user),
     ];
   }
 
@@ -96,67 +96,90 @@ class _LayoutState extends State<Layout> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          Padding(
+          Obx(() {
+            bool hasSelected =
+                reminderController.data.any((element) => element['selected']);
+            return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Wrap(
-                direction: Axis.horizontal,
-                children: [
-                  IconButton(
+              child: hasSelected
+                  ? TextButton(
                       onPressed: () {
-                        setState(() {
-                          searchBar = !searchBar;
-                        });
-                      },
-                      icon: const Icon(CupertinoIcons.search)),
-                  MenuAnchor(
-                      builder: (context, controller, child) {
-                        return IconButton(
-                          onPressed: () {
-                            if (controller.isOpen) {
-                              controller.close();
-                            } else {
-                              controller.open();
-                            }
-                          },
-                          icon: const Icon(CupertinoIcons.ellipsis_vertical),
+                        reminderController.deleteData(
+                          context,
+                          reminderController.data
+                              .where((e) => e['selected'])
+                              .map((e) => e['id'])
+                              .toList(),
                         );
                       },
-                      menuChildren: [
-                        MenuItemButton(
-                            onPressed: () {
-                              Navigator.push(context, _goPage(const Setting()));
-                            },
-                            child: const Text("Setting")),
-                        MenuItemButton(
-                            onPressed: () {
-                              signOut();
-                            },
-                            child: const Text("Sign out")),
-                      ]),
-                ],
-              ))
+                      child: const Text("Delete"),
+                    )
+                  : Wrap(
+                      direction: Axis.horizontal,
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              searchBar = !searchBar;
+                            });
+                          },
+                          icon: const Icon(CupertinoIcons.search),
+                        ),
+                        MenuAnchor(
+                          builder: (context, controller, child) {
+                            return IconButton(
+                              onPressed: () {
+                                if (controller.isOpen) {
+                                  controller.close();
+                                } else {
+                                  controller.open();
+                                }
+                              },
+                              icon:
+                                  const Icon(CupertinoIcons.ellipsis_vertical),
+                            );
+                          },
+                          menuChildren: [
+                            MenuItemButton(
+                              onPressed: () {
+                                Navigator.push(
+                                    context, _goPage(const Setting()));
+                              },
+                              child: const Text("Setting"),
+                            ),
+                            MenuItemButton(
+                              onPressed: () {
+                                signOut();
+                              },
+                              child: const Text("Sign out"),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            );
+          })
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-          onTap: _onItemTapped,
-          currentIndex: _currentIndex,
-          selectedItemColor: Colors.white,
-          backgroundColor: Colors.purple.shade400,
-          unselectedItemColor: Colors.white70,
-          items: const [
-            BottomNavigationBarItem(
-                label: "Reminder",
-                activeIcon: Icon(CupertinoIcons.bell_fill),
-                icon: Icon(CupertinoIcons.bell)),
-            BottomNavigationBarItem(
-                label: "Chat",
-                activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
-                icon: Icon(CupertinoIcons.chat_bubble_2)),
-            BottomNavigationBarItem(
-                label: "Group",
-                activeIcon: Icon(Icons.group),
-                icon: Icon(Icons.group_outlined)),
-          ]),
+        onTap: _onItemTapped,
+        currentIndex: _currentIndex,
+        selectedItemColor: Colors.white,
+        backgroundColor: Colors.purple.shade400,
+        unselectedItemColor: Colors.white70,
+        items: const [
+          BottomNavigationBarItem(
+            label: "Chat",
+            activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
+            icon: Icon(CupertinoIcons.chat_bubble_2),
+          ),
+          BottomNavigationBarItem(
+            label: "Reminder",
+            activeIcon: Icon(CupertinoIcons.bell_fill),
+            icon: Icon(CupertinoIcons.bell),
+          ),
+        ],
+      ),
       body: PageView(
         physics: const BouncingScrollPhysics(),
         controller: _pageController,

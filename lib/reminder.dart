@@ -19,24 +19,16 @@ class Reminder extends StatefulWidget {
 }
 
 class _ReminderState extends State<Reminder> {
-  final reminderController = Get.put(ReminderController());
+  final ReminderController reminderController = Get.put(ReminderController());
 
   @override
   void initState() {
     super.initState();
-    getData().then((_) {
-      activateAllAlarms(reminderController.data);
-    });
-  }
-
-  Future<void> getData() async {
-    await reminderController.fetchData();
+    reminderController.onInit();
   }
 
   Future<void> changeStatus(String id, bool status, int index) async {
-    setState(() {
-      reminderController.data[index]['active'] = status;
-    });
+    reminderController.data[index]['active'] = status;
 
     try {
       await FirebaseFirestore.instance
@@ -47,24 +39,23 @@ class _ReminderState extends State<Reminder> {
       int alarmId = id.hashCode;
 
       if (status) {
-        DateTime alarmTime =
-            DateTime.parse(reminderController.data[index]['time']);
-        await AndroidAlarmManager.oneShotAt(
-          alarmTime,
-          alarmId,
-          () => alarmCallback(
-              alarmId, reminderController.data[index]['reminder_message']),
-          exact: true,
-          wakeup: true,
-          rescheduleOnReboot: true,
-        );
+        DateTime alarmTime = DateTime.fromMillisecondsSinceEpoch(
+            reminderController.data[index]['time']);
+        if (alarmTime.isAfter(DateTime.now())) {
+          await AndroidAlarmManager.oneShotAt(
+            alarmTime,
+            alarmId,
+            alarmCallback,
+            exact: true,
+            wakeup: true,
+            rescheduleOnReboot: true,
+          );
+        }
       } else {
         await AndroidAlarmManager.cancel(alarmId);
       }
     } catch (e) {
-      setState(() {
-        reminderController.data[index]['active'] = !status;
-      });
+      reminderController.data[index]['active'] = !status;
     }
   }
 
@@ -75,84 +66,94 @@ class _ReminderState extends State<Reminder> {
         onPressed: () {
           Navigator.push(
             context,
-            _goPage(AddReminder(
-              user: widget.user,
-            )),
-          ).then((_) => refresh());
+            _goPage(AddReminder(user: widget.user)),
+          ).then((_) => reminderController.fetchData());
         },
         backgroundColor: Colors.purple.shade400,
         foregroundColor: Colors.white,
         shape: const CircleBorder(eccentricity: 0),
-        child: const Icon(
-          Icons.add,
-        ),
+        child: const Icon(Icons.add),
       ),
       body: RefreshIndicator(
         color: Colors.purple.shade400,
-        onRefresh: refresh,
+        onRefresh: reminderController.fetchData,
         child: SizedBox(
           height: double.infinity,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
-            child: GetBuilder<ReminderController>(
-              builder: (controller) {
-                if (controller.data.isEmpty) {
+            child: Obx(
+              () {
+                if (reminderController.data.isEmpty) {
                   return const Center(child: Text("No reminders found."));
                 }
 
                 return ListView.builder(
                   itemCount: reminderController.data.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   itemBuilder: (context, index) {
                     var data = reminderController.data[index];
-                    var slctd = data['selected'];
-                    return ListTile(
-                      key: ValueKey(data['id']),
-                      onLongPress: () {
-                        setState(() {
+                    // ignore: unnecessary_null_comparison
+                    if (data == null) return Container();
+                    var slctd = data['selected'] ?? false;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.5),
+                              spreadRadius: 2,
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]),
+                      child: ListTile(
+                        key: ValueKey(data['id']),
+                        onLongPress: () {
                           data['selected'] = !slctd;
-                        });
-                      },
-                      onTap: () {
-                        if (reminderController.data
-                                .any((element) => element['selected']) &&
-                            data['selected']) {
-                          setState(() {
+                          reminderController.data.refresh();
+                        },
+                        onTap: () {
+                          if (reminderController.data
+                                  .any((element) => element['selected']) &&
+                              data['selected']) {
                             data['selected'] = false;
-                          });
-                        } else if (reminderController.data
-                                .any((element) => element['selected']) &&
-                            !data['selected']) {
-                          setState(() {
+                          } else if (reminderController.data
+                                  .any((element) => element['selected']) &&
+                              !data['selected']) {
                             data['selected'] = true;
-                          });
-                        } else {
-                          Navigator.push(
+                          } else {
+                            Navigator.push(
                               context,
                               _goPage(
-                                  EditReminder(data: data, user: widget.user)));
-                        }
-                      },
-                      tileColor:
-                          data['selected'] ? Colors.black12 : Colors.white,
-                      title: Text(
-                        formatTime(data['time']),
-                        style: TextStyle(
-                          color: data['active'] ? Colors.purple : Colors.grey,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 30,
-                        ),
-                      ),
-                      subtitle: Text(
-                        data['event'],
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                      trailing: Switch(
-                        value: data['active'],
-                        activeColor: Colors.purple,
-                        onChanged: (value) {
-                          changeStatus(data['id'], value, index);
+                                  EditReminder(data: data, user: widget.user)),
+                            );
+                          }
+                          reminderController.data.refresh();
                         },
+                        tileColor:
+                            data['selected'] ? Colors.black12 : Colors.white,
+                        title: Text(
+                          formatTime(data['time']),
+                          style: TextStyle(
+                            color: data['active'] ? Colors.purple : Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 30,
+                          ),
+                        ),
+                        subtitle: Text(
+                          data['event'] ?? '',
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                        trailing: Switch(
+                          value: data['active'] ?? false,
+                          activeColor: Colors.purple,
+                          onChanged: (value) {
+                            changeStatus(data['id'], value, index);
+                          },
+                        ),
                       ),
                     );
                   },
@@ -163,10 +164,6 @@ class _ReminderState extends State<Reminder> {
         ),
       ),
     );
-  }
-
-  Future<void> refresh() async {
-    await getData();
   }
 
   Route _goPage(Widget page) {

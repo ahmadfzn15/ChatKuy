@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:sioren/chat.dart';
@@ -12,6 +11,7 @@ class Home extends StatefulWidget {
   final User? user;
 
   @override
+  // ignore: library_private_types_in_public_api
   _HomeState createState() => _HomeState();
 }
 
@@ -138,11 +138,15 @@ class _HomeState extends State<Home> {
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
-                    child: Text("Chat kamu masih kosong nih"),
+                    child: Text(
+                      "Chat kamu masih kosong nih",
+                      style: TextStyle(fontSize: 18),
+                    ),
                   );
                 } else {
                   return ListView.builder(
                     itemCount: snapshot.data!.docs.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     itemBuilder: (context, index) {
                       var chatRoom = snapshot.data!.docs[index].data()
                           as Map<String, dynamic>;
@@ -171,41 +175,63 @@ class _HomeState extends State<Home> {
                           var message = snapshot.data!['message']!;
                           var unread = snapshot.data!['unread']!;
 
-                          return ListTile(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                _goPage(Chat(
-                                  id: chatId,
-                                  userId: user['uid'],
-                                  user: widget.user,
-                                )),
-                              );
-                            },
-                            title: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(user['name'] ?? "Unknown User"),
-                                Text(formatTime(message['created_at'] ?? ""),
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.5),
+                                    spreadRadius: 2,
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ]),
+                            child: ListTile(
+                              minLeadingWidth: 30,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  _goPage(Chat(
+                                    id: chatId,
+                                    userId: user['uid'],
+                                    user: widget.user,
+                                  )),
+                                );
+                              },
+                              title: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    user['name'] ?? "Unknown User",
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        overflow: TextOverflow.clip))
-                              ],
-                            ),
-                            subtitle: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(message['message'] ?? ""),
-                              ],
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 5, horizontal: 10),
-                            leading: GestureDetector(
-                              onTap: () {},
-                              child: const CircleAvatar(
-                                radius: 25,
-                                backgroundImage:
-                                    AssetImage("assets/img/lusi.jpeg"),
+                                        color: Colors.purple,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(formatTime(message['created_at'] ?? ""),
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          overflow: TextOverflow.clip))
+                                ],
+                              ),
+                              subtitle: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(message['message'] ?? ""),
+                                ],
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 5, horizontal: 10),
+                              leading: GestureDetector(
+                                onTap: () {},
+                                child: const CircleAvatar(
+                                  radius: 25,
+                                  backgroundImage:
+                                      AssetImage("assets/img/user.png"),
+                                ),
                               ),
                             ),
                           );

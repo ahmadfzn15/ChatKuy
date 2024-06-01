@@ -13,9 +13,6 @@ class Messaging {
     await _firebaseMessaging.requestPermission();
 
     final token = await _firebaseMessaging.getToken();
-
-    // ignore: avoid_print
-    print(token);
   }
 
   Future<void> sendNotif(String token, String title, String body) async {

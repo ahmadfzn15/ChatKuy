@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -15,40 +14,27 @@ class AddReminder extends StatefulWidget {
   _AddReminderState createState() => _AddReminderState();
 }
 
-Route _goPage(Widget page) {
-  return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: const Duration(milliseconds: 300),
-    reverseTransitionDuration: const Duration(milliseconds: 300),
-    opaque: false,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(0.0, 1.0);
-      const end = Offset.zero;
-      final tween = Tween(begin: begin, end: end)
-          .chain(CurveTween(curve: Curves.easeInOutExpo));
-      final offsetAnimation = animation.drive(tween);
-
-      return SlideTransition(
-        position: offsetAnimation,
-        child: child,
-      );
-    },
-  );
-}
-
 class _AddReminderState extends State<AddReminder> {
   final reminderController = Get.put(ReminderController());
-  TimeOfDay? selectedTime;
+  TimeOfDay? selectedTime = TimeOfDay.now();
   final TextEditingController _event = TextEditingController();
   final TextEditingController _reminderMessage = TextEditingController();
   final TextEditingController _stopMessage = TextEditingController();
   DateTime time = DateTime.now();
+  bool allDay = false;
+  List<Map<String, dynamic>> days = [
+    {"selected": false, "id": 1, "day": "Monday"},
+    {"selected": false, "id": 2, "day": "Tuesday"},
+    {"selected": false, "id": 3, "day": "Wednesday"},
+    {"selected": false, "id": 4, "day": "Thursday"},
+    {"selected": false, "id": 5, "day": "Friday"},
+    {"selected": false, "id": 6, "day": "Saturday"},
+    {"selected": false, "id": 7, "day": "Sunday"},
+  ];
 
   @override
   void initState() {
     super.initState();
-
-    _selectTime(context);
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -82,12 +68,30 @@ class _AddReminderState extends State<AddReminder> {
   }
 
   Future<void> addReminder() async {
-    await reminderController.addData(context, {
-      "event": _event.text,
-      "time": time,
-      "reminder_message": _reminderMessage.text,
-      "stop_message": _stopMessage.text,
-    });
+    if (_event.text.isNotEmpty &&
+        _reminderMessage.text.isNotEmpty &&
+        _stopMessage.text.isNotEmpty &&
+        selectedTime != null) {
+      time = DateTime(
+        time.year,
+        time.month,
+        time.day,
+        selectedTime!.hour,
+        selectedTime!.minute,
+      );
+      await reminderController.addData(context, {
+        "event": _event.text,
+        "time": time,
+        "repeat": days
+            .where((element) => element['selected'])
+            .map((e) => e['id'])
+            .toList(),
+        "reminder_message": _reminderMessage.text,
+        "stop_message": _stopMessage.text,
+      });
+    } else {
+      Popup().show(context, "Please fill in all fields", false);
+    }
   }
 
   @override
@@ -165,23 +169,17 @@ class _AddReminderState extends State<AddReminder> {
                   ),
                 ),
                 ListTile(
-                  onTap: () => _showDialog(
-                    CupertinoDatePicker(
-                      initialDateTime: time,
-                      mode: CupertinoDatePickerMode.time,
-                      use24hFormat: true,
-                      onDateTimeChanged: (DateTime newTime) {
-                        setState(() => time = newTime);
-                      },
-                    ),
-                  ),
+                  onTap: () {
+                    _selectTime(context);
+                  },
                   shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10))),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 0),
                   title: const Text("Time",
                       style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  trailing: Text("${time.hour}:${time.minute}",
+                  trailing: Text(
+                      "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}",
                       style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
@@ -191,59 +189,60 @@ class _AddReminderState extends State<AddReminder> {
                   thickness: 0.5,
                 ),
                 ListTile(
-                  onTap: () => _showDialog(Material(
-                    child: ListView(
-                      children: [
-                        SwitchListTile(
-                          value: true,
-                          shape: const RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(10))),
-                          title: const Text("Every Day"),
-                          activeColor: Colors.purple,
-                          onChanged: (value) {
-                            setState(() {
-                              // allowVarian = value;
-                            });
-                          },
+                  onTap: () => _showDialog(StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setState) {
+                      return Material(
+                        child: ListView(
+                          children: [
+                            SwitchListTile(
+                              value: allDay,
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
+                              title: const Text("Every Day"),
+                              activeColor: Colors.purple,
+                              onChanged: (value) {
+                                setState(() {
+                                  allDay = value;
+                                  if (value) {
+                                    for (var element in days) {
+                                      element['selected'] = true;
+                                    }
+                                  } else {
+                                    for (var element in days) {
+                                      element['selected'] = false;
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                            SizedBox(
+                              height: 200,
+                              child: ListView.builder(
+                                itemCount: days.length,
+                                itemBuilder: (context, index) {
+                                  return CheckboxListTile(
+                                    value: days[index]['selected'],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        days[index]['selected'] = value;
+                                        if (!days.every(
+                                            (element) => element['selected'])) {
+                                          allDay = false;
+                                        } else {
+                                          allDay = true;
+                                        }
+                                      });
+                                    },
+                                    title: Text(days[index]['day']),
+                                  );
+                                },
+                              ),
+                            )
+                          ],
                         ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Monday"),
-                        ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Tuesday"),
-                        ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Wednesday"),
-                        ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Thursday"),
-                        ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Friday"),
-                        ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Saturday"),
-                        ),
-                        CheckboxListTile(
-                          value: true,
-                          onChanged: (value) {},
-                          title: const Text("Sunday"),
-                        )
-                      ],
-                    ),
+                      );
+                    },
                   )),
                   shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10))),
@@ -282,10 +281,6 @@ class _AddReminderState extends State<AddReminder> {
                 ),
                 CupertinoTextField(
                   controller: _reminderMessage,
-                  // prefix: const Padding(
-                  //   padding: EdgeInsets.only(left: 10),
-                  //   child: Icon(Icons.alarm),
-                  // ),
                   placeholder: "Enter reminder message",
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
@@ -311,10 +306,6 @@ class _AddReminderState extends State<AddReminder> {
                 ),
                 CupertinoTextField(
                   controller: _stopMessage,
-                  // prefix: const Padding(
-                  //   padding: EdgeInsets.only(left: 10),
-                  //   child: Icon(Icons.alarm),
-                  // ),
                   placeholder: "Enter stop message",
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 15),

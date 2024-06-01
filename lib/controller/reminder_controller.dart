@@ -1,26 +1,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:sioren/components/popup.dart';
+import 'package:sioren/etc/alarm.dart';
 
 class ReminderController extends GetxController {
-  RxList<dynamic> data = [].obs;
-  String url = dotenv.env['API_URL']!;
+  RxList<Map<String, dynamic>> data = <Map<String, dynamic>>[].obs;
+  String? url;
+
   RxBool selectAll = false.obs;
   RxBool select = false.obs;
 
-  Future<void> fetchData() async {
-    var res = await FirebaseFirestore.instance
-        .collection("reminder")
-        .orderBy("created_at", descending: true)
-        .get();
+  @override
+  void onInit() {
+    super.onInit();
+    fetchData().then((value) => activateAllAlarms(data));
+  }
 
-    data = res.docs
-        .map((e) => {"id": e.id, "selected": false, ...e.data()})
-        .toList()
-        .obs;
-    update();
+  Future<void> fetchData() async {
+    try {
+      var res = await FirebaseFirestore.instance
+          .collection("reminder")
+          .orderBy("created_at", descending: true)
+          .get();
+
+      data.value = res.docs
+          .map((e) => {"id": e.id, "selected": false, ...e.data()})
+          .toList();
+      await activateAllAlarms(data);
+      update();
+    } catch (e) {
+      print("Error fetching data: $e");
+    }
   }
 
   Future<void> addData(BuildContext context, Map<String, dynamic> data) async {
@@ -28,6 +39,7 @@ class ReminderController extends GetxController {
       await FirebaseFirestore.instance.collection("reminder").add({
         "event": data['event'],
         "time": data['time'],
+        "repeat": FieldValue.arrayUnion(data['repeat']),
         "reminder_message": data['reminder_message'],
         "stop_message": data['stop_message'],
         "active": true,
@@ -53,9 +65,9 @@ class ReminderController extends GetxController {
           .update({
         "event": data['event'],
         "time": data['time'],
+        "repeat": FieldValue.arrayUnion(data['repeat']),
         "reminder_message": data['reminder_message'],
         "stop_message": data['stop_message'],
-        "active": data['active'],
         "updated_at": Timestamp.now(),
       });
       await fetchData();
@@ -70,7 +82,7 @@ class ReminderController extends GetxController {
     }
   }
 
-  Future<void> deleteData(BuildContext context, List<String> ids) async {
+  Future<void> deleteData(BuildContext context, List<dynamic> ids) async {
     try {
       for (var id in ids) {
         await FirebaseFirestore.instance
@@ -81,10 +93,10 @@ class ReminderController extends GetxController {
       await fetchData();
 
       // ignore: use_build_context_synchronously
-      Popup().show(context, "Reminder(s) deleted successfully", true);
+      Popup().show(context, "Reminder deleted successfully", true);
     } catch (e) {
       // ignore: use_build_context_synchronously
-      Popup().show(context, "Reminder(s) failed to delete", false);
+      Popup().show(context, "Reminder failed to delete", false);
     }
   }
 }

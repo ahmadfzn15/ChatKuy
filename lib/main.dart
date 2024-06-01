@@ -1,3 +1,6 @@
+import 'dart:isolate';
+import 'dart:ui';
+
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,15 +12,27 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sioren/auth/auth.dart';
+import 'package:sioren/etc/alarm.dart';
 import 'package:sioren/etc/messaging.dart';
 import 'package:sioren/firebase_options.dart';
 import 'package:sioren/layout.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+ReceivePort port = ReceivePort();
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+}
+
+void initializeNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+  );
 }
 
 void main() async {
@@ -27,16 +42,16 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  IsolateNameServer.registerPortWithName(
+    port.sendPort,
+    'isolate',
+  );
+
   await Messaging().initMessaging();
   await AndroidAlarmManager.initialize();
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
-
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  initializeNotifications();
 
   runApp(
     const MainApp(),
