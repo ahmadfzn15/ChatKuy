@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:sioren/components/popup.dart';
-import 'package:sioren/layout.dart';
+import 'package:chat/components/popup.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key, required this.pageController});
@@ -37,7 +36,6 @@ Route _goPage(Widget page) {
 }
 
 class _RegisterState extends State<Register> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -60,39 +58,38 @@ class _RegisterState extends State<Register> {
 
       UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.value.text,
-        password: _passwordController.value.text,
+        email: _emailController.value.text.trim(),
+        password: _passwordController.value.text.trim(),
       );
 
       await FirebaseFirestore.instance.collection('users').add({
         "uid": userCredential.user!.uid,
         "photo": null,
-        "name": _nameController.text,
-        "email": _emailController.text,
+        "name": _nameController.text.trim(),
+        "email": _emailController.text.trim(),
         "telephone_number": null,
         "bio": null,
         "created_at": Timestamp.now()
       });
 
-      if (userCredential.user != null) {
-        final String? token = await userCredential.user!.getIdToken();
-        await storage.write(key: "token", value: token);
+      User? user = userCredential.user;
+      if (user != null && !user.emailVerified) {
+        user.sendEmailVerification();
 
-        Navigator.pushAndRemoveUntil(
-          // ignore: use_build_context_synchronously
-          context,
-          _goPage(Layout(user: userCredential.user)),
-          (route) => false,
-        );
-
-        // ignore: use_build_context_synchronously
-        Popup().show(context, "Sign up Successfully", true);
+        Popup()
+            // ignore: use_build_context_synchronously
+            .show(context, "Email verification has been sent to your email",
+                true);
         setState(() {
           _emailController.clear();
           _passwordController.clear();
           _passwordControllerConfirmation.clear();
         });
         loading = false;
+
+        widget.pageController.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutExpo);
       } else {
         setState(() {
           _emailController.clear();

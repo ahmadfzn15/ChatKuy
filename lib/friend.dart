@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sioren/chat.dart';
-import 'package:sioren/model/friend_model.dart';
+import 'package:chat/chat.dart';
+import 'package:chat/model/friend_model.dart';
 
 class Friend extends StatefulWidget {
   const Friend({super.key, required this.user});

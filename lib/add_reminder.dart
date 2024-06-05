@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sioren/components/popup.dart';
-import 'package:sioren/controller/reminder_controller.dart';
+import 'package:chat/components/popup.dart';
+import 'package:chat/controller/reminder_controller.dart';
 
 class AddReminder extends StatefulWidget {
   const AddReminder({super.key, required this.user});
@@ -88,6 +88,7 @@ class _AddReminderState extends State<AddReminder> {
             .toList(),
         "reminder_message": _reminderMessage.text,
         "stop_message": _stopMessage.text,
+        "user_id": widget.user!.uid
       });
     } else {
       Popup().show(context, "Please fill in all fields", false);

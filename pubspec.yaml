@@ -1,5 +1,5 @@
-name: sioren
-description: "SiOren chat application"
+name: chat
+description: "application"
 publish_to: "none"
 version: 1.0.0
 
@@ -7,7 +7,7 @@ environment:
   sdk: ">=3.2.4 <4.0.0"
 
 dependencies:
-  cloud_firestore: ^4.14.0
+  cloud_firestore: ^4.17.5
   firebase_auth: ^4.16.0
   firebase_core: ^2.24.2
   firebase_storage: ^11.6.0
@@ -21,7 +21,6 @@ dependencies:
   image_picker: ^1.0.7
   permission_handler: ^11.2.0
   encrypt: ^5.0.3
-  audioplayers: ^6.0.0
   get: ^4.6.6
   flutter_local_notifications: ^17.1.2
   speech_to_text: ^6.6.0
@@ -29,6 +28,8 @@ dependencies:
   flutter_dotenv: ^5.1.0
   http: ^1.2.1
   android_alarm_manager_plus: ^4.0.3
+  flutter_background_service: ^5.0.5
+  flutter_background_service_android: ^6.2.2
 
 dev_dependencies:
   flutter_test:

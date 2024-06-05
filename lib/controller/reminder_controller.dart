@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sioren/components/popup.dart';
-import 'package:sioren/etc/alarm.dart';
+import 'package:chat/components/popup.dart';
+import 'package:chat/etc/alarm.dart';
 
 class ReminderController extends GetxController {
   RxList<Map<String, dynamic>> data = <Map<String, dynamic>>[].obs;
@@ -27,7 +27,7 @@ class ReminderController extends GetxController {
       data.value = res.docs
           .map((e) => {"id": e.id, "selected": false, ...e.data()})
           .toList();
-      await activateAllAlarms(data);
+      await activateAllAlarms(res.docs.map((e) => e.data()).toList());
       update();
     } catch (e) {
       print("Error fetching data: $e");

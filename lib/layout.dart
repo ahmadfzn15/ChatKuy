@@ -3,12 +3,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
-import 'package:sioren/auth/auth.dart';
-import 'package:sioren/components/popup.dart';
-import 'package:sioren/controller/reminder_controller.dart';
-import 'package:sioren/home.dart';
-import 'package:sioren/setting.dart';
-import 'package:sioren/reminder.dart';
+import 'package:chat/auth/auth.dart';
+import 'package:chat/components/popup.dart';
+import 'package:chat/controller/reminder_controller.dart';
+import 'package:chat/home.dart';
+import 'package:chat/setting.dart';
+import 'package:chat/reminder.dart';
 
 class Layout extends StatefulWidget {
   const Layout({super.key, required this.user});

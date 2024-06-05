@@ -3,11 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:get/get.dart';
-import 'package:sioren/add_reminder.dart';
-import 'package:sioren/controller/reminder_controller.dart';
-import 'package:sioren/edit_reminder.dart';
-import 'package:sioren/etc/alarm.dart';
-import 'package:sioren/etc/format_time.dart';
+import 'package:chat/add_reminder.dart';
+import 'package:chat/controller/reminder_controller.dart';
+import 'package:chat/edit_reminder.dart';
+import 'package:chat/etc/alarm.dart';
+import 'package:chat/etc/format_time.dart';
 
 class Reminder extends StatefulWidget {
   const Reminder({super.key, required this.user});

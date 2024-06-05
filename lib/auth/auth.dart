@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sioren/auth/login.dart';
-import 'package:sioren/auth/register.dart';
+import 'package:chat/auth/login.dart';
+import 'package:chat/auth/register.dart';
 
 class Auth extends StatefulWidget {
   const Auth({super.key});

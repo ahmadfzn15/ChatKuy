@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sioren/etc/format_time.dart';
-import 'package:sioren/etc/messaging.dart';
+import 'package:chat/etc/format_time.dart';
+import 'package:chat/etc/messaging.dart';
 
 class Chat extends StatefulWidget {
   const Chat(
@@ -165,11 +165,6 @@ class _ChatState extends State<Chat> {
               )),
         ),
         actions: [
-          IconButton(
-              onPressed: () {
-                print("Hello");
-              },
-              icon: const Icon(Icons.call)),
           MenuAnchor(
               builder: (context, controller, child) {
                 return IconButton(

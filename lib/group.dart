@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:sioren/friend.dart';
+import 'package:chat/friend.dart';
 
 class Group extends StatefulWidget {
   const Group({super.key, required this.user});

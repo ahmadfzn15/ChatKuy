@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sioren/chat.dart';
-import 'package:sioren/etc/format_time.dart';
-import 'package:sioren/friend.dart';
+import 'package:chat/chat.dart';
+import 'package:chat/etc/format_time.dart';
+import 'package:flutter/services.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, required this.user});
@@ -38,10 +40,40 @@ Route _goPage(Widget page) {
 class _HomeState extends State<Home> {
   bool loading = false;
   Stream<QuerySnapshot<Map<String, dynamic>>>? dataSnapshot;
+  static const platform = MethodChannel("com.example.app/alarm");
+  Timer? _timer;
+
+  Future<void> _run() async {
+    try {
+      await platform.invokeMethod('scheduleAlarm', {
+        "time": DateTime.now()
+            .add(const Duration(seconds: 10))
+            .millisecondsSinceEpoch,
+        "title": "Selamat Siang",
+        "message": "Saatnya makan siang",
+      });
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print("Failed to get data: '${e.message}'.");
+    }
+  }
+
+  Future<void> _handleMethodCall(MethodCall call) async {
+    if (call.method == 'onSpeechResult') {
+      String result = call.arguments;
+      // ignore: avoid_print
+      print('Speech Result: $result');
+      if (_timer != null && _timer!.isActive) {
+        _timer!.cancel();
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+
+    platform.setMethodCallHandler(_handleMethodCall);
 
     dataSnapshot = FirebaseFirestore.instance
         .collection('chatRoom')
@@ -105,11 +137,13 @@ class _HomeState extends State<Home> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-              context,
-              _goPage(Friend(
-                user: widget.user,
-              )));
+          _run();
+
+          // Navigator.push(
+          //     context,
+          //     _goPage(Friend(
+          //       user: widget.user,
+          //     )));
         },
         backgroundColor: Colors.purple.shade400,
         foregroundColor: Colors.white,
@@ -223,8 +257,8 @@ class _HomeState extends State<Home> {
                                   Text(message['message'] ?? ""),
                                 ],
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 5, horizontal: 10),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               leading: GestureDetector(
                                 onTap: () {},
                                 child: const CircleAvatar(

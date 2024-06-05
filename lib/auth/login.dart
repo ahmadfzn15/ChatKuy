@@ -4,9 +4,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:sioren/auth/forgot_password.dart';
-import 'package:sioren/components/popup.dart';
-import 'package:sioren/layout.dart';
+import 'package:chat/auth/forgot_password.dart';
+import 'package:chat/components/popup.dart';
+import 'package:chat/layout.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key, required this.pageController});
@@ -54,30 +54,40 @@ class _LoginState extends State<Login> {
 
       UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
       if (userCredential.user != null) {
-        final String? token = await userCredential.user!.getIdToken();
-        await storage.write(key: "token", value: token);
-        saveTokenToDatabase(userCredential.user!.uid);
+        User user = userCredential.user!;
+        await user.reload();
+        if (user.emailVerified) {
+          final String? token = await user.getIdToken();
+          await storage.write(key: "token", value: token);
+          saveTokenToDatabase(user.uid);
 
-        Navigator.pushAndRemoveUntil(
+          Navigator.pushAndRemoveUntil(
+            // ignore: use_build_context_synchronously
+            context,
+            _goPage(Layout(user: user)),
+            (route) => false,
+          );
+
           // ignore: use_build_context_synchronously
-          context,
-          _goPage(Layout(user: userCredential.user)),
-          (route) => false,
-        );
+          Popup().show(context, "Sign in successfully", true);
 
-        // ignore: use_build_context_synchronously
-        Popup().show(context, "Sign in successfully", true);
-
-        setState(() {
-          _emailController.clear();
-          _passwordController.clear();
-          loading = false;
-        });
+          setState(() {
+            _emailController.clear();
+            _passwordController.clear();
+            loading = false;
+          });
+        } else {
+          setState(() {
+            loading = false;
+          });
+          // ignore: use_build_context_synchronously
+          _showEmailVerificationDialog(context, user);
+        }
       } else {
         setState(() {
           _passwordController.clear();
@@ -101,6 +111,33 @@ class _LoginState extends State<Login> {
       // ignore: use_build_context_synchronously
       Popup().show(context, "An unexpected error occurred", false);
     }
+  }
+
+  Future<void> _showEmailVerificationDialog(
+      BuildContext context, User user) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Email not verified"),
+          content: const Text("Please verify your email to continue."),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await user.sendEmailVerification();
+                // ignore: use_build_context_synchronously
+                Navigator.of(context).pop();
+              },
+              child: const Text("Resend Verification Email"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> saveTokenToDatabase(String userId) async {

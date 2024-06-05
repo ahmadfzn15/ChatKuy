@@ -2,9 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sioren/components/popup.dart';
-import 'package:sioren/controller/reminder_controller.dart';
-import 'package:sioren/etc/alarm.dart';
+import 'package:chat/components/popup.dart';
+import 'package:chat/controller/reminder_controller.dart';
+import 'package:chat/etc/alarm.dart';
 
 class EditReminder extends StatefulWidget {
   const EditReminder({super.key, required this.data, required this.user});
@@ -82,13 +82,12 @@ class _EditReminderState extends State<EditReminder> {
   Future<void> editReminder() async {
     if (_event.text.isNotEmpty &&
         _reminderMessage.text.isNotEmpty &&
-        _stopMessage.text.isNotEmpty &&
-        // ignore: unnecessary_null_comparison
-        (selectedTime != null || time != null)) {
+        _stopMessage.text.isNotEmpty) {
+      var now = DateTime.now();
       time = DateTime(
-        time.year,
-        time.month,
-        time.day,
+        now.year,
+        now.month,
+        now.day,
         selectedTime?.hour ?? time.hour,
         selectedTime?.minute ?? time.minute,
       );

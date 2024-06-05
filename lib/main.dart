@@ -1,6 +1,4 @@
 import 'dart:isolate';
-import 'dart:ui';
-
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,11 +9,13 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:sioren/auth/auth.dart';
-import 'package:sioren/etc/alarm.dart';
-import 'package:sioren/etc/messaging.dart';
-import 'package:sioren/firebase_options.dart';
-import 'package:sioren/layout.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:chat/auth/auth.dart';
+import 'package:chat/etc/alarm.dart';
+import 'package:chat/etc/background.dart';
+import 'package:chat/etc/messaging.dart';
+import 'package:chat/firebase_options.dart';
+import 'package:chat/layout.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -25,37 +25,52 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
 }
 
-void initializeNotifications() async {
+Future<void> initializeNotifications() async {
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const InitializationSettings initializationSettings =
       InitializationSettings(android: initializationSettingsAndroid);
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings,
+      onDidReceiveNotificationResponse:
+          (NotificationResponse notificationResponse) {
+    if (notificationResponse.payload != null) {
+      handleNotificationResponse(notificationResponse.payload!);
+    }
+  }, onDidReceiveBackgroundNotificationResponse: notificationTapBackground);
+}
+
+Future<void> _requestPermissions() async {
+  await Permission.microphone.request();
+  await Permission.notification.request();
+  await Permission.ignoreBatteryOptimizations.request();
+}
+
+Future<void> _requestPermissionsIfNeeded() async {
+  const storage = FlutterSecureStorage();
+  String? permissionRequested = await storage.read(key: 'permission_requested');
+
+  if (permissionRequested == null) {
+    await _requestPermissions();
+    await storage.write(key: 'permission_requested', value: 'true');
+  }
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  IsolateNameServer.registerPortWithName(
-    port.sendPort,
-    'isolate',
-  );
 
   await Messaging().initMessaging();
   await AndroidAlarmManager.initialize();
-  initializeNotifications();
+  await initializeNotifications();
+  await _requestPermissionsIfNeeded();
 
-  runApp(
-    const MainApp(),
-  );
+  await initializeService();
+
+  runApp(const MainApp());
 }
 
 class MainApp extends StatefulWidget {
@@ -66,7 +81,7 @@ class MainApp extends StatefulWidget {
   _MainAppState createState() => _MainAppState();
 }
 
-class _MainAppState extends State<MainApp> {
+class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   ThemeMode themeMode = ThemeMode.system;
 
   @override
