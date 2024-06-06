@@ -14,6 +14,7 @@ import io.flutter.plugin.common.MethodChannel
 class SpeechRecognitionService : Service(), RecognitionListener {
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var methodChannel: MethodChannel
+    private var stopMessage: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -29,31 +30,30 @@ class SpeechRecognitionService : Service(), RecognitionListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        stopMessage = intent?.getStringExtra("stop_message")
         startListening()
         return START_STICKY
-    }
-
-    private fun startListening() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, this.packageName)
-        speechRecognizer.startListening(intent)
-    }
-
-    override fun onDestroy() {
-        speechRecognizer.destroy()
-        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
 
+    private fun startListening() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
+        speechRecognizer.startListening(intent)
+    }
+
     override fun onReadyForSpeech(params: Bundle?) {}
     override fun onBeginningOfSpeech() {}
     override fun onRmsChanged(rmsdB: Float) {}
     override fun onBufferReceived(buffer: ByteArray?) {}
-    override fun onEndOfSpeech() {}
+    override fun onEndOfSpeech() {
+        startListening()
+    }
+
     override fun onError(error: Int) {
         startListening()
     }
@@ -65,11 +65,24 @@ class SpeechRecognitionService : Service(), RecognitionListener {
             if (::methodChannel.isInitialized) {
                 methodChannel.invokeMethod("onSpeechResult", result)
             }
-            if (result.contains("stop", true)) {
-                stopSelf()
+            stopMessage?.let {
+                if (result.contains(it, true)) {
+                    val alarmServiceIntent = Intent(this, AlarmService::class.java)
+                    stopService(alarmServiceIntent)
+                    stopSelf()
+                    Log.d("SpeechRecognition", "Alarm Stopped")
+                }
             }
         }
+
         startListening()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::speechRecognizer.isInitialized) {
+            speechRecognizer.destroy()
+        }
     }
 
     override fun onPartialResults(partialResults: Bundle?) {}

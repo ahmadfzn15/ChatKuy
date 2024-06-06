@@ -61,6 +61,12 @@ class _LoginState extends State<Login> {
       if (userCredential.user != null) {
         User user = userCredential.user!;
         await user.reload();
+
+        setState(() {
+          _emailController.clear();
+          _passwordController.clear();
+          loading = false;
+        });
         if (user.emailVerified) {
           final String? token = await user.getIdToken();
           await storage.write(key: "token", value: token);
@@ -75,12 +81,6 @@ class _LoginState extends State<Login> {
 
           // ignore: use_build_context_synchronously
           Popup().show(context, "Sign in successfully", true);
-
-          setState(() {
-            _emailController.clear();
-            _passwordController.clear();
-            loading = false;
-          });
         } else {
           setState(() {
             loading = false;

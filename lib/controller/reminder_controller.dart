@@ -1,8 +1,8 @@
+import 'package:chat/etc/alarm.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chat/components/popup.dart';
-import 'package:chat/etc/alarm.dart';
 
 class ReminderController extends GetxController {
   RxList<Map<String, dynamic>> data = <Map<String, dynamic>>[].obs;
@@ -14,7 +14,8 @@ class ReminderController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchData().then((value) => activateAllAlarms(data));
+
+    fetchData();
   }
 
   Future<void> fetchData() async {
@@ -27,9 +28,11 @@ class ReminderController extends GetxController {
       data.value = res.docs
           .map((e) => {"id": e.id, "selected": false, ...e.data()})
           .toList();
-      await activateAllAlarms(res.docs.map((e) => e.data()).toList());
+
+      await Alarm().scheduleAllAlarms();
       update();
     } catch (e) {
+      // ignore: avoid_print
       print("Error fetching data: $e");
     }
   }
@@ -85,6 +88,7 @@ class ReminderController extends GetxController {
   Future<void> deleteData(BuildContext context, List<dynamic> ids) async {
     try {
       for (var id in ids) {
+        await Alarm().cancelAlarm(id.hashCode);
         await FirebaseFirestore.instance
             .collection("reminder")
             .doc(id)

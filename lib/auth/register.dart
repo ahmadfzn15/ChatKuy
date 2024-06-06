@@ -74,17 +74,18 @@ class _RegisterState extends State<Register> {
 
       User? user = userCredential.user;
       if (user != null && !user.emailVerified) {
+        setState(() {
+          _emailController.clear();
+          _passwordController.clear();
+          _passwordControllerConfirmation.clear();
+        });
+
         user.sendEmailVerification();
 
         Popup()
             // ignore: use_build_context_synchronously
             .show(context, "Email verification has been sent to your email",
                 true);
-        setState(() {
-          _emailController.clear();
-          _passwordController.clear();
-          _passwordControllerConfirmation.clear();
-        });
         loading = false;
 
         widget.pageController.previousPage(
@@ -93,8 +94,6 @@ class _RegisterState extends State<Register> {
       } else {
         setState(() {
           _emailController.clear();
-          _passwordController.clear();
-          _passwordControllerConfirmation.clear();
         });
         loading = false;
         // ignore: use_build_context_synchronously
@@ -103,8 +102,6 @@ class _RegisterState extends State<Register> {
     } on FirebaseAuthException catch (e) {
       setState(() {
         _emailController.clear();
-        _passwordController.clear();
-        _passwordControllerConfirmation.clear();
       });
       loading = false;
       // ignore: use_build_context_synchronously
@@ -112,8 +109,6 @@ class _RegisterState extends State<Register> {
     } catch (e) {
       setState(() {
         _emailController.clear();
-        _passwordController.clear();
-        _passwordControllerConfirmation.clear();
       });
       loading = false;
       // ignore: use_build_context_synchronously

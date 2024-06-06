@@ -1,12 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:get/get.dart';
 import 'package:chat/add_reminder.dart';
 import 'package:chat/controller/reminder_controller.dart';
 import 'package:chat/edit_reminder.dart';
-import 'package:chat/etc/alarm.dart';
 import 'package:chat/etc/format_time.dart';
 
 class Reminder extends StatefulWidget {
@@ -35,25 +33,6 @@ class _ReminderState extends State<Reminder> {
           .collection("reminder")
           .doc(id)
           .update({"active": status});
-
-      int alarmId = id.hashCode;
-
-      if (status) {
-        DateTime alarmTime = DateTime.fromMillisecondsSinceEpoch(
-            reminderController.data[index]['time']);
-        if (alarmTime.isAfter(DateTime.now())) {
-          await AndroidAlarmManager.oneShotAt(
-            alarmTime,
-            alarmId,
-            alarmCallback,
-            exact: true,
-            wakeup: true,
-            rescheduleOnReboot: true,
-          );
-        }
-      } else {
-        await AndroidAlarmManager.cancel(alarmId);
-      }
     } catch (e) {
       reminderController.data[index]['active'] = !status;
     }
@@ -98,7 +77,8 @@ class _ReminderState extends State<Reminder> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
-                          color: Colors.white,
+                          color:
+                              data['selected'] ? Colors.black12 : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -132,8 +112,6 @@ class _ReminderState extends State<Reminder> {
                           }
                           reminderController.data.refresh();
                         },
-                        tileColor:
-                            data['selected'] ? Colors.black12 : Colors.white,
                         title: Text(
                           formatTime(data['time']),
                           style: TextStyle(

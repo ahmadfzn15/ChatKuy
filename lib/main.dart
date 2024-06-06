@@ -1,42 +1,20 @@
-import 'dart:isolate';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:chat/etc/alarm.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:chat/auth/auth.dart';
-import 'package:chat/etc/alarm.dart';
-import 'package:chat/etc/background.dart';
 import 'package:chat/etc/messaging.dart';
 import 'package:chat/firebase_options.dart';
 import 'package:chat/layout.dart';
 
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-ReceivePort port = ReceivePort();
-
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-}
-
-Future<void> initializeNotifications() async {
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-      onDidReceiveNotificationResponse:
-          (NotificationResponse notificationResponse) {
-    if (notificationResponse.payload != null) {
-      handleNotificationResponse(notificationResponse.payload!);
-    }
-  }, onDidReceiveBackgroundNotificationResponse: notificationTapBackground);
 }
 
 Future<void> _requestPermissions() async {
@@ -64,11 +42,8 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   await Messaging().initMessaging();
-  await AndroidAlarmManager.initialize();
-  await initializeNotifications();
   await _requestPermissionsIfNeeded();
-
-  await initializeService();
+  await Alarm().scheduleAllAlarms();
 
   runApp(const MainApp());
 }
@@ -84,6 +59,11 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   ThemeMode themeMode = ThemeMode.system;
 
+  Future<void> saveUserUID(String uid) async {
+    const storage = FlutterSecureStorage();
+    await storage.write(key: 'user_uid', value: uid);
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
@@ -93,7 +73,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
       ),
       home: FutureBuilder<bool>(
         future: checkToken(),
@@ -107,6 +87,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
                     return const CircularProgressIndicator();
                   } else {
                     if (authSnapshot.data != null) {
+                      saveUserUID(authSnapshot.data!.uid);
                       return Layout(user: authSnapshot.data);
                     } else {
                       return const Auth();

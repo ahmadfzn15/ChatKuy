@@ -47,6 +47,13 @@ class _EditReminderState extends State<EditReminder> {
     time = DateTime.fromMillisecondsSinceEpoch(
         widget.data['time'].seconds * 1000 +
             widget.data['time'].nanoseconds ~/ 1000000);
+
+    List<dynamic> repeat = widget.data['repeat'];
+    for (var element in days) {
+      if (repeat.contains(element['id'])) {
+        element['selected'] = true;
+      }
+    }
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -205,56 +212,61 @@ class _EditReminderState extends State<EditReminder> {
                   thickness: 0.5,
                 ),
                 ListTile(
-                  onTap: () => _showDialog(Material(
-                    child: ListView(
-                      children: [
-                        SwitchListTile(
-                          value: allDay,
-                          shape: const RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(10))),
-                          title: const Text("Every Day"),
-                          activeColor: Colors.purple,
-                          onChanged: (value) {
-                            setState(() {
-                              allDay = value;
-                              if (value) {
-                                for (var element in days) {
-                                  element['selected'] = true;
-                                }
-                              } else {
-                                for (var element in days) {
-                                  element['selected'] = false;
-                                }
-                              }
-                            });
-                          },
-                        ),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            itemCount: days.length,
-                            itemBuilder: (context, index) {
-                              return CheckboxListTile(
-                                value: days[index]['selected'],
-                                onChanged: (value) {
-                                  setState(() {
-                                    days[index]['selected'] = value;
-                                    if (!days.every(
-                                        (element) => element['selected'])) {
-                                      allDay = false;
-                                    } else {
-                                      allDay = true;
+                  onTap: () => _showDialog(StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setState) {
+                      return Material(
+                        child: ListView(
+                          children: [
+                            SwitchListTile(
+                              value:
+                                  days.every((element) => element['selected']),
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
+                              title: const Text("Every Day"),
+                              activeColor: Colors.purple,
+                              onChanged: (value) {
+                                setState(() {
+                                  allDay = value;
+                                  if (value) {
+                                    for (var element in days) {
+                                      element['selected'] = true;
                                     }
-                                  });
+                                  } else {
+                                    for (var element in days) {
+                                      element['selected'] = false;
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                            SizedBox(
+                              height: 200,
+                              child: ListView.builder(
+                                itemCount: days.length,
+                                itemBuilder: (context, index) {
+                                  return CheckboxListTile(
+                                    value: days[index]['selected'],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        days[index]['selected'] = value;
+                                        if (!days.every(
+                                            (element) => element['selected'])) {
+                                          allDay = false;
+                                        } else {
+                                          allDay = true;
+                                        }
+                                      });
+                                    },
+                                    title: Text(days[index]['day']),
+                                  );
                                 },
-                                title: Text(days[index]['day']),
-                              );
-                            },
-                          ),
-                        )
-                      ],
-                    ),
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    },
                   )),
                   shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(Radius.circular(10))),

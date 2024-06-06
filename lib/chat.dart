@@ -66,6 +66,7 @@ class _ChatState extends State<Chat> {
         loading = false;
       });
     } catch (e) {
+      // ignore: avoid_print
       print('Error getting user data: $e');
     }
   }
@@ -109,6 +110,7 @@ class _ChatState extends State<Chat> {
         "deleted_id": [],
         "created_at": Timestamp.now()
       }).then((value) async {
+        _message.clear();
         fetchMessages();
         await updateStatusRoom();
 
@@ -116,7 +118,6 @@ class _ChatState extends State<Chat> {
             "dK5A7R4cSKa08MtHIf45LI:APA91bHtTPx2cxO9rIWauTTVRvUvm_Uaa-Df8byKnVejA6TRx_LrW7sx3b0Usnr3tp-2YGlG0Lk0FDRVtQw-ypvZLN_p61XG1oF-txZTxu3Mn90nn7IZj6sP5P-UUFT2mnrp4p4vYV9k",
             "Ahmad Fauzan",
             _message.text);
-        _message.clear();
       });
     }
   }
@@ -159,7 +160,7 @@ class _ChatState extends State<Chat> {
                     color: Colors.white,
                   ),
                   CircleAvatar(
-                    backgroundImage: AssetImage("assets/img/lusi.jpeg"),
+                    backgroundImage: AssetImage("assets/img/user.png"),
                   )
                 ],
               )),

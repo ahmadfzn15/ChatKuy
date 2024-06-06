@@ -21,6 +21,7 @@ class _AddReminderState extends State<AddReminder> {
   final TextEditingController _reminderMessage = TextEditingController();
   final TextEditingController _stopMessage = TextEditingController();
   DateTime time = DateTime.now();
+  bool loading = false;
   bool allDay = false;
   List<Map<String, dynamic>> days = [
     {"selected": false, "id": 1, "day": "Monday"},
@@ -68,6 +69,10 @@ class _AddReminderState extends State<AddReminder> {
   }
 
   Future<void> addReminder() async {
+    setState(() {
+      loading = true;
+    });
+
     if (_event.text.isNotEmpty &&
         _reminderMessage.text.isNotEmpty &&
         _stopMessage.text.isNotEmpty &&
@@ -90,7 +95,14 @@ class _AddReminderState extends State<AddReminder> {
         "stop_message": _stopMessage.text,
         "user_id": widget.user!.uid
       });
+
+      setState(() {
+        loading = true;
+      });
     } else {
+      setState(() {
+        loading = true;
+      });
       Popup().show(context, "Please fill in all fields", false);
     }
   }
@@ -117,7 +129,7 @@ class _AddReminderState extends State<AddReminder> {
         actions: [
           IconButton(
               onPressed: () {
-                addReminder();
+                loading ? null : addReminder();
               },
               icon: const Icon(
                 Icons.check,

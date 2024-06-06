@@ -112,7 +112,10 @@ class _LayoutState extends State<Layout> {
                               .toList(),
                         );
                       },
-                      child: const Text("Delete"),
+                      child: const Text(
+                        "Delete",
+                        style: TextStyle(color: Colors.white),
+                      ),
                     )
                   : Wrap(
                       direction: Axis.horizontal,
