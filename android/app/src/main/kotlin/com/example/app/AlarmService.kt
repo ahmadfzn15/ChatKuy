@@ -9,20 +9,26 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import org.json.*
 import java.util.*
+import io.flutter.plugin.common.MethodChannel
 
 class AlarmService : Service(), TextToSpeech.OnInitListener {
     private val CHANNEL_ID = "AlarmChannel"
     private lateinit var textToSpeech: TextToSpeech
     private var messageToSpeak: String? = null
     private var stopMessage: String? = null
+    private lateinit var methodChannel: MethodChannel
     private val handler = Handler(Looper.getMainLooper())
     private var isTTSInitialized: Boolean = false
     private var shouldLoop: Boolean = true
+    private var isListening: Boolean = false
+    private lateinit var speechIntent: Intent
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         textToSpeech = TextToSpeech(this, this)
+        speechIntent = Intent(this, SpeechRecognitionService::class.java)
+        Log.d("AlarmService", "Service Created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -35,14 +41,19 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, requestCode, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
+        val stopIntent = Intent(this, AlarmStopReceiver::class.java)
+        val stopPendingIntent = PendingIntent.getBroadcast(this, requestCode, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(message)
             .setSmallIcon(R.drawable.launch_background)
             .setContentIntent(pendingIntent)
+            .addAction(0, "Stop", stopPendingIntent)
             .build()
 
         startForeground(1, notification)
+        Log.d("AlarmService", "Notification started")
 
         val repeatDays = intent?.getIntegerArrayListExtra("repeat")
         if (repeatDays != null) {
@@ -51,7 +62,8 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
         }
 
         startSpeechRecognition()
-
+        loopMessage()
+        startVibration()
         return START_STICKY
     }
 
@@ -59,7 +71,8 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
             isTTSInitialized = true
             textToSpeech.language = Locale("id", "ID")
-            loopMessage()
+            Log.d("AlarmService", "TTS Initialized")
+            if (shouldLoop) loopMessage()
         } else {
             Log.e("TextToSpeech", "Initialization failed")
         }
@@ -69,10 +82,7 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
         super.onDestroy()
         stopAlarm()
         handler.removeCallbacksAndMessages(null)
-        if (::textToSpeech.isInitialized) {
-            textToSpeech.stop()
-            textToSpeech.shutdown()
-        }
+        Log.d("AlarmService", "Service Destroyed")
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -100,6 +110,8 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
             putExtra("stop_message", stopMessage)
             putIntegerArrayListExtra("repeat", repeatDays)
             putExtra("requestCode", requestCode)
+            putExtra("hour", hour)
+            putExtra("minute", minute)
         }
         val pendingIntent = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -146,41 +158,13 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
     }
 
     private fun startSpeechRecognition() {
-        val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("id", "ID"))
+        if (isListening) {
+            stopService(speechIntent)
+            isListening = false
         }
-        speechRecognizer.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-
-            override fun onError(error: Int) {
-                handler.postDelayed({ startSpeechRecognition() }, 3000)
-            }
-
-            override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (matches != null) {
-                    val recognizedText = matches[0]
-                    if (recognizedText.equals(stopMessage, ignoreCase = true)) {
-                        shouldLoop = false
-                        stopAlarm()
-                    } else {
-                        startSpeechRecognition()
-                    }
-                } else {
-                    startSpeechRecognition()
-                }
-            }
-
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-        speechRecognizer.startListening(recognizerIntent)
+        speechIntent.putExtra("stop_message", stopMessage)
+        startService(speechIntent)
+        isListening = true
     }
 
     private fun loopMessage() {
@@ -193,15 +177,40 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
             textToSpeech.speak(messageToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
 
             handler.postDelayed({
-                if (shouldLoop) {
-                    handler.postDelayed({ loopMessage() }, 3000)
-                }
+                startSpeechRecognition()
+                handler.postDelayed({
+                    stopService(speechIntent)
+                    loopMessage()
+                }, 4000)
             }, estimatedDuration)
         }
     }
 
+    private fun startVibration() {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val vibrationPattern = longArrayOf(0, 500, 1000)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val vibrationEffect = VibrationEffect.createWaveform(vibrationPattern, 0)
+            vibrator.vibrate(vibrationEffect)
+        } else {
+            vibrator.vibrate(vibrationPattern, 0)
+        }
+    }
+
+    private fun stopVibration() {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        vibrator.cancel()
+    }
+
     private fun stopAlarm() {
+        shouldLoop = false
+        if (::textToSpeech.isInitialized) {
+            textToSpeech.stop()
+            textToSpeech.shutdown()
+        }
         stopForeground(true)
         stopSelf()
+        stopVibration()
     }
 }

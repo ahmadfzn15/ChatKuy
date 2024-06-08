@@ -93,11 +93,11 @@ class _AddReminderState extends State<AddReminder> {
             .toList(),
         "reminder_message": _reminderMessage.text,
         "stop_message": _stopMessage.text,
-        "user_id": widget.user!.uid
+        "uid": widget.user!.uid
       });
 
       setState(() {
-        loading = true;
+        loading = false;
       });
     } else {
       setState(() {

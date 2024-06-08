@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:chat/components/popup.dart';
 import 'package:chat/friend.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:chat/chat.dart';
 import 'package:chat/etc/format_time.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, required this.user});
@@ -40,17 +44,52 @@ Route _goPage(Widget page) {
 class _HomeState extends State<Home> {
   bool loading = false;
   Stream<QuerySnapshot<Map<String, dynamic>>>? dataSnapshot;
+  static const platform = MethodChannel('com.example.app/alarm');
 
   @override
   void initState() {
     super.initState();
 
+    platform.setMethodCallHandler(_handleMethodCall);
+    _requestPermissionsIfNeeded();
     dataSnapshot = FirebaseFirestore.instance
         .collection('chatRoom')
         .where("participants", arrayContains: widget.user!.uid)
         .where("active", isEqualTo: true)
         .orderBy("updated_at", descending: true)
         .snapshots();
+  }
+
+  Future<void> record() async {
+    await platform.invokeMethod('record', {
+      "stop_message": 'iya',
+    });
+  }
+
+  Future<void> _handleMethodCall(MethodCall call) async {
+    if (call.method == 'record') {
+      String result = call.arguments;
+      Popup().show(context, result, true);
+      // ignore: avoid_print
+      print('Speech Result: $result');
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    await Permission.microphone.request();
+    await Permission.notification.request();
+    await Permission.ignoreBatteryOptimizations.request();
+  }
+
+  Future<void> _requestPermissionsIfNeeded() async {
+    const storage = FlutterSecureStorage();
+    String? permissionRequested =
+        await storage.read(key: 'permission_requested');
+
+    if (permissionRequested == null) {
+      await _requestPermissions();
+      await storage.write(key: 'permission_requested', value: 'true');
+    }
   }
 
   Future<Map<String, dynamic>> getUser(Map<String, dynamic> chatRoom) async {
@@ -139,10 +178,19 @@ class _HomeState extends State<Home> {
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "Chat kamu masih kosong nih",
-                      style: TextStyle(fontSize: 18),
+                  return Center(
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Chat kamu masih kosong nih",
+                          style: TextStyle(fontSize: 18),
+                        ),
+                        FilledButton(
+                            onPressed: () {
+                              record();
+                            },
+                            child: const Text("Record"))
+                      ],
                     ),
                   );
                 } else {
@@ -175,7 +223,7 @@ class _HomeState extends State<Home> {
 
                           var user = snapshot.data!['user']!;
                           var message = snapshot.data!['message']!;
-                          var unread = snapshot.data!['unread']!;
+                          // var unread = snapshot.data!['unread']!;
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),

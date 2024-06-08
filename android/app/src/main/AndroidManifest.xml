@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.BIND_VOICE_INTERACTION" />
 
     <application
         android:label="Reminder"
@@ -39,19 +40,27 @@
 
         <service
             android:name=".AlarmService"
-            android:foregroundServiceType="dataSync|microphone"
-            android:exported="true"/>
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="dataSync|location|mediaPlayback|microphone|camera"
+            android:permission="android.permission.FOREGROUND_SERVICE" />
 
         <service
             android:name=".SpeechRecognitionService"
-            android:exported="true"/>
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:enabled="true"
+            android:exported="true" />
 
         <receiver
             android:name=".AlarmReceiver"
             android:enabled="true"
             android:exported="true"/>
 
-        <receiver
+        <receiver android:name=".AlarmStopReceiver" 
+            android:enabled="true"
+            android:exported="true"/>
+
+        <!-- <receiver
             android:name="dev.fluttercommunity.plus.androidalarmmanager.RebootBroadcastReceiver"
             android:enabled="true"
             android:exported="false">
@@ -59,12 +68,13 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
             </intent-filter>
-        </receiver>
+        </receiver> -->
 
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <category android:name="android.intent.category.DEFAULT"/>

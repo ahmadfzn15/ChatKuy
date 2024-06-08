@@ -46,6 +46,7 @@ class ReminderController extends GetxController {
         "reminder_message": data['reminder_message'],
         "stop_message": data['stop_message'],
         "active": true,
+        "uid": data['uid'],
         "created_at": Timestamp.now(),
       });
       await fetchData();

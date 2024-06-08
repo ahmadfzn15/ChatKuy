@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chat/components/popup.dart';
 import 'package:chat/controller/reminder_controller.dart';
-import 'package:chat/etc/alarm.dart';
 
 class EditReminder extends StatefulWidget {
   const EditReminder({super.key, required this.data, required this.user});

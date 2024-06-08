@@ -17,26 +17,26 @@ class Chat extends StatefulWidget {
   _ChatState createState() => _ChatState();
 }
 
-Route _goPage(Widget widget) {
-  return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => widget,
-    transitionDuration: const Duration(milliseconds: 300),
-    reverseTransitionDuration: const Duration(milliseconds: 300),
-    opaque: false,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(1.0, 0.0);
-      const end = Offset.zero;
-      final tween = Tween(begin: begin, end: end)
-          .chain(CurveTween(curve: Curves.easeInOutExpo));
-      final offsetAnimation = animation.drive(tween);
+// Route _goPage(Widget widget) {
+//   return PageRouteBuilder(
+//     pageBuilder: (context, animation, secondaryAnimation) => widget,
+//     transitionDuration: const Duration(milliseconds: 300),
+//     reverseTransitionDuration: const Duration(milliseconds: 300),
+//     opaque: false,
+//     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+//       const begin = Offset(1.0, 0.0);
+//       const end = Offset.zero;
+//       final tween = Tween(begin: begin, end: end)
+//           .chain(CurveTween(curve: Curves.easeInOutExpo));
+//       final offsetAnimation = animation.drive(tween);
 
-      return SlideTransition(
-        position: offsetAnimation,
-        child: child,
-      );
-    },
-  );
-}
+//       return SlideTransition(
+//         position: offsetAnimation,
+//         child: child,
+//       );
+//     },
+//   );
+// }
 
 class _ChatState extends State<Chat> {
   final TextEditingController _message = TextEditingController();
@@ -145,7 +145,7 @@ class _ChatState extends State<Chat> {
         titleSpacing: 0,
         leadingWidth: 95,
         leading: Padding(
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.only(left: 4),
           child: TextButton(
               style: const ButtonStyle(
                   padding: MaterialStatePropertyAll(EdgeInsets.zero)),
