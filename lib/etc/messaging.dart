@@ -10,9 +10,33 @@ class Messaging {
   final authorization = dotenv.env['AUTHORIZATION'];
 
   Future<void> initMessaging() async {
-    await _firebaseMessaging.requestPermission();
+    try {
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
 
-    final token = await _firebaseMessaging.getToken();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // ignore: avoid_print
+        print('User granted permission');
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
+        // ignore: avoid_print
+        print('User granted provisional permission');
+      } else {
+        // ignore: avoid_print
+        print('User declined or has not accepted permission');
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error initializing messaging: $e');
+    }
   }
 
   Future<void> sendNotif(String token, String title, String body) async {
@@ -32,6 +56,7 @@ class Messaging {
             }
           }));
     } catch (e) {
+      // ignore: avoid_print
       print(e);
     }
   }

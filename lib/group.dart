@@ -41,7 +41,6 @@ class _GroupState extends State<Group> {
       "selected": false
     },
   ];
-  bool _select = false;
 
   Future<void> refresh() async {
     await Future.delayed(const Duration(seconds: 1));
@@ -94,7 +93,6 @@ class _GroupState extends State<Group> {
                     },
                     onLongPress: () {
                       setState(() {
-                        _select = true;
                         data[index]['selected'] = true;
                       });
                     },

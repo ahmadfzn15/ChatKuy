@@ -236,6 +236,7 @@ class _EditReminderState extends State<EditReminder> {
                                       element['selected'] = false;
                                     }
                                   }
+                                  getRepeatText();
                                 });
                               },
                             ),
@@ -248,13 +249,15 @@ class _EditReminderState extends State<EditReminder> {
                                     value: days[index]['selected'],
                                     onChanged: (value) {
                                       setState(() {
-                                        days[index]['selected'] = value;
+                                        days[index]['selected'] = value!;
                                         if (!days.every(
                                             (element) => element['selected'])) {
                                           allDay = false;
                                         } else {
                                           allDay = true;
                                         }
+
+                                        getRepeatText();
                                       });
                                     },
                                     title: Text(days[index]['day']),
@@ -273,13 +276,16 @@ class _EditReminderState extends State<EditReminder> {
                   title: const Text("Repeat",
                       style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  trailing: const Wrap(
+                  trailing: Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,
                     direction: Axis.horizontal,
                     children: [
-                      Text("Never",
-                          style: TextStyle(fontSize: 15, color: Colors.grey)),
-                      Icon(
+                      Text(
+                        getRepeatText(),
+                        style:
+                            const TextStyle(fontSize: 15, color: Colors.grey),
+                      ),
+                      const Icon(
                         Icons.chevron_right,
                         size: 30,
                       )
@@ -304,10 +310,6 @@ class _EditReminderState extends State<EditReminder> {
                 ),
                 CupertinoTextField(
                   controller: _reminderMessage,
-                  // prefix: const Padding(
-                  //   padding: EdgeInsets.only(left: 10),
-                  //   child: Icon(Icons.alarm),
-                  // ),
                   placeholder: "Enter reminder message",
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
@@ -333,10 +335,6 @@ class _EditReminderState extends State<EditReminder> {
                 ),
                 CupertinoTextField(
                   controller: _stopMessage,
-                  // prefix: const Padding(
-                  //   padding: EdgeInsets.only(left: 10),
-                  //   child: Icon(Icons.alarm),
-                  // ),
                   placeholder: "Enter stop message",
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
@@ -351,5 +349,20 @@ class _EditReminderState extends State<EditReminder> {
             )),
       ),
     );
+  }
+
+  String getRepeatText() {
+    List<dynamic> selectedDays = days
+        .where((element) => element['selected'])
+        .map((e) => e['day'])
+        .toList();
+
+    if (selectedDays.length == 7) {
+      return "Every day";
+    } else if (selectedDays.isEmpty) {
+      return "Never";
+    } else {
+      return selectedDays.join(', ');
+    }
   }
 }

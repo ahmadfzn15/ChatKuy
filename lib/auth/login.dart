@@ -4,7 +4,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:chat/auth/forgot_password.dart';
 import 'package:chat/components/popup.dart';
 import 'package:chat/layout.dart';
 
@@ -70,6 +69,7 @@ class _LoginState extends State<Login> {
         if (user.emailVerified) {
           final String? token = await user.getIdToken();
           await storage.write(key: "token", value: token);
+          await storage.write(key: "user_uid", value: user.uid);
           saveTokenToDatabase(user.uid);
 
           Navigator.pushAndRemoveUntil(
@@ -250,22 +250,6 @@ class _LoginState extends State<Login> {
                       border: Border.all(
                           color: const Color(0xFF94a3b8), width: 0.5),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                              context, _goPage(const ForgotPassword()));
-                        },
-                        child: const Text(
-                          "Forgot password?",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: 25),
                   SizedBox(

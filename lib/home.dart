@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:chat/components/popup.dart';
 import 'package:chat/friend.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,7 +7,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:chat/chat.dart';
 import 'package:chat/etc/format_time.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -44,13 +42,11 @@ Route _goPage(Widget page) {
 class _HomeState extends State<Home> {
   bool loading = false;
   Stream<QuerySnapshot<Map<String, dynamic>>>? dataSnapshot;
-  static const platform = MethodChannel('com.example.app/alarm');
 
   @override
   void initState() {
     super.initState();
 
-    platform.setMethodCallHandler(_handleMethodCall);
     _requestPermissionsIfNeeded();
     dataSnapshot = FirebaseFirestore.instance
         .collection('chatRoom')
@@ -60,25 +56,12 @@ class _HomeState extends State<Home> {
         .snapshots();
   }
 
-  Future<void> record() async {
-    await platform.invokeMethod('record', {
-      "stop_message": 'iya',
-    });
-  }
-
-  Future<void> _handleMethodCall(MethodCall call) async {
-    if (call.method == 'record') {
-      String result = call.arguments;
-      Popup().show(context, result, true);
-      // ignore: avoid_print
-      print('Speech Result: $result');
-    }
-  }
-
   Future<void> _requestPermissions() async {
     await Permission.microphone.request();
+    await Permission.speech.request();
     await Permission.notification.request();
     await Permission.ignoreBatteryOptimizations.request();
+    await Permission.scheduleExactAlarm.request();
   }
 
   Future<void> _requestPermissionsIfNeeded() async {
@@ -178,19 +161,10 @@ class _HomeState extends State<Home> {
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      children: [
-                        const Text(
-                          "Chat kamu masih kosong nih",
-                          style: TextStyle(fontSize: 18),
-                        ),
-                        FilledButton(
-                            onPressed: () {
-                              record();
-                            },
-                            child: const Text("Record"))
-                      ],
+                  return const Center(
+                    child: Text(
+                      "Chat kamu masih kosong nih",
+                      style: TextStyle(fontSize: 18),
                     ),
                   );
                 } else {

@@ -16,7 +16,8 @@ class SpeechRecognitionService : Service(), RecognitionListener {
     private var methodChannel: MethodChannel? = null
     private val handler = Handler(Looper.getMainLooper())
     private var stopMessage: String? = null
-    private var isListening: Boolean = false
+    private var isListening = false
+    private val retryDelay: Long = 1000 // Delay before retrying listening
 
     override fun onCreate() {
         super.onCreate()
@@ -54,56 +55,70 @@ class SpeechRecognitionService : Service(), RecognitionListener {
         }
     }
 
-    override fun onReadyForSpeech(params: Bundle?) {}
-    override fun onBeginningOfSpeech() {}
-    override fun onRmsChanged(rmsdB: Float) {}
-    override fun onBufferReceived(buffer: ByteArray?) {}
+    override fun onReadyForSpeech(params: Bundle?) {
+        Log.d("SpeechRecognitionService", "Ready for speech")
+    }
+
+    override fun onBeginningOfSpeech() {
+        Log.d("SpeechRecognitionService", "Speech started")
+    }
+
+    override fun onRmsChanged(rmsdB: Float) {
+        Log.d("SpeechRecognitionService", "RMS changed: $rmsdB")
+    }
+
+    override fun onBufferReceived(buffer: ByteArray?) {
+        Log.d("SpeechRecognitionService", "Buffer received")
+    }
+
     override fun onEndOfSpeech() {
+        Log.d("SpeechRecognitionService", "Speech ended")
         isListening = false
-        handler.postDelayed({ startListening() }, 1000)
+        handler.postDelayed({ startListening() }, retryDelay)
     }
 
     override fun onError(error: Int) {
-        Log.d("SpeechRecognition", "Error: $error")
+        Log.d("SpeechRecognitionService", "Error: $error")
         isListening = false
-        when (error) {
-            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
-                handler.postDelayed({ startListening() }, 2000)
-            }
-            SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
-            SpeechRecognizer.ERROR_NO_MATCH -> {
-                handler.postDelayed({ startListening() }, 1000)
-            }
-            else -> {
-                handler.postDelayed({ startListening() }, 2000)
-            }
+        val delay = when (error) {
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> retryDelay * 2
+            else -> retryDelay
         }
+        handler.postDelayed({ startListening() }, delay)
     }
 
     override fun onResults(results: Bundle?) {
         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         matches?.forEach { result ->
-            Log.d("SpeechRecognition", "Result: $result")
+            Log.d("SpeechRecognitionService", "Result: $result")
             methodChannel?.invokeMethod("onSpeechResult", result)
             stopMessage?.let {
-                if (result.contains(it, true)) {
+                if (result.contains(it, ignoreCase = true)) {
                     val alarmServiceIntent = Intent(this, AlarmService::class.java)
                     stopService(alarmServiceIntent)
                     stopSelf()
-                    Log.d("SpeechRecognition", "Alarm Stopped")
+                    Log.d("SpeechRecognitionService", "Alarm Stopped")
                 }
             }
         }
-
         isListening = false
-        handler.postDelayed({ startListening() }, 1000)
+        handler.postDelayed({ startListening() }, retryDelay)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        if (isListening) {
+            speechRecognizer.stopListening()
+        }
         speechRecognizer.destroy()
+        Log.d("SpeechRecognitionService", "Service Destroyed")
     }
 
-    override fun onPartialResults(partialResults: Bundle?) {}
-    override fun onEvent(eventType: Int, params: Bundle?) {}
+    override fun onPartialResults(partialResults: Bundle?) {
+        Log.d("SpeechRecognitionService", "Partial results received")
+    }
+
+    override fun onEvent(eventType: Int, params: Bundle?) {
+        Log.d("SpeechRecognitionService", "Event received: $eventType")
+    }
 }

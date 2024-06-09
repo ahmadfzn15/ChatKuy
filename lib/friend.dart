@@ -95,6 +95,7 @@ class _FriendState extends State<Friend> {
           }
         });
       } catch (e) {
+        // ignore: avoid_print
         print("Error fetching friends: $e");
       } finally {
         setState(() {

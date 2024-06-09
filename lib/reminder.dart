@@ -26,13 +26,16 @@ class _ReminderState extends State<Reminder> {
   }
 
   Future<void> changeStatus(String id, bool status, int index) async {
-    reminderController.data[index]['active'] = status;
+    setState(() {
+      reminderController.data[index]['active'] = status;
+    });
 
     try {
       await FirebaseFirestore.instance
           .collection("reminder")
           .doc(id)
           .update({"active": status});
+      reminderController.onInit();
     } catch (e) {
       reminderController.data[index]['active'] = !status;
     }

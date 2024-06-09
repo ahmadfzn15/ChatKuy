@@ -51,8 +51,8 @@ class _LayoutState extends State<Layout> {
   void initState() {
     super.initState();
     page = [
-      Home(user: widget.user),
       Reminder(user: widget.user),
+      Home(user: widget.user),
     ];
   }
 
@@ -73,6 +73,7 @@ class _LayoutState extends State<Layout> {
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();
     await const FlutterSecureStorage().delete(key: "token");
+    await const FlutterSecureStorage().delete(key: "user_uid");
 
     Navigator.pushAndRemoveUntil(
       // ignore: use_build_context_synchronously
@@ -85,6 +86,10 @@ class _LayoutState extends State<Layout> {
     Popup().show(context, "Sign out Successfully", true);
   }
 
+  void openDialog(BuildContext context, CupertinoAlertDialog dialog) {
+    showCupertinoModalPopup(context: context, builder: (context) => dialog);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,7 +97,7 @@ class _LayoutState extends State<Layout> {
         backgroundColor: Colors.purple.shade400,
         foregroundColor: Colors.white,
         title: const Text(
-          "ChatKuy",
+          "Reminder",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -104,13 +109,35 @@ class _LayoutState extends State<Layout> {
               child: hasSelected
                   ? TextButton(
                       onPressed: () {
-                        reminderController.deleteData(
-                          context,
-                          reminderController.data
-                              .where((e) => e['selected'])
-                              .map((e) => e['id'])
-                              .toList(),
-                        );
+                        openDialog(
+                            context,
+                            CupertinoAlertDialog(
+                              title: const Text("Delete reminder"),
+                              content: Text(
+                                  "Are you sure to delete ${reminderController.data.where((e) => e['selected']).length} reminder?"),
+                              actions: [
+                                CupertinoDialogAction(
+                                  isDefaultAction: true,
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text("No"),
+                                ),
+                                CupertinoDialogAction(
+                                  isDefaultAction: true,
+                                  onPressed: () {
+                                    reminderController.deleteData(
+                                      context,
+                                      reminderController.data
+                                          .where((e) => e['selected'])
+                                          .map((e) => e['id'])
+                                          .toList(),
+                                    );
+                                  },
+                                  child: const Text("Yes"),
+                                ),
+                              ],
+                            ));
                       },
                       child: const Text(
                         "Delete",
@@ -152,7 +179,29 @@ class _LayoutState extends State<Layout> {
                             ),
                             MenuItemButton(
                               onPressed: () {
-                                signOut();
+                                openDialog(
+                                    context,
+                                    CupertinoAlertDialog(
+                                      title: const Text("Logout"),
+                                      content: const Text(
+                                          "Are you sure to logout now?"),
+                                      actions: [
+                                        CupertinoDialogAction(
+                                          isDefaultAction: true,
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text("No"),
+                                        ),
+                                        CupertinoDialogAction(
+                                          isDefaultAction: true,
+                                          onPressed: () {
+                                            signOut();
+                                          },
+                                          child: const Text("Yes"),
+                                        ),
+                                      ],
+                                    ));
                               },
                               child: const Text("Sign out"),
                             ),
@@ -172,14 +221,14 @@ class _LayoutState extends State<Layout> {
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(
-            label: "Chat",
-            activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
-            icon: Icon(CupertinoIcons.chat_bubble_2),
-          ),
-          BottomNavigationBarItem(
             label: "Reminder",
             activeIcon: Icon(CupertinoIcons.bell_fill),
             icon: Icon(CupertinoIcons.bell),
+          ),
+          BottomNavigationBarItem(
+            label: "Chat",
+            activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
+            icon: Icon(CupertinoIcons.chat_bubble_2),
           ),
         ],
       ),
