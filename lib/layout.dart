@@ -1,7 +1,7 @@
+import 'package:battery_plus/battery_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:chat/auth/auth.dart';
 import 'package:chat/components/popup.dart';
@@ -9,6 +9,8 @@ import 'package:chat/controller/reminder_controller.dart';
 import 'package:chat/home.dart';
 import 'package:chat/setting.dart';
 import 'package:chat/reminder.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Layout extends StatefulWidget {
   const Layout({super.key, required this.user});
@@ -46,14 +48,69 @@ class _LayoutState extends State<Layout> {
   int _currentIndex = 0;
   bool searchBar = false;
   List<Widget> page = [];
+  final Battery _battery = Battery();
+  bool _isPowerSaveMode = false;
 
   @override
   void initState() {
     super.initState();
+
+    _requestPermissionsIfNeeded();
+    _checkPowerSaveMode();
     page = [
       Reminder(user: widget.user),
       Home(user: widget.user),
     ];
+  }
+
+  Future<void> _checkPowerSaveMode() async {
+    final isPowerSaveMode = await _battery.isInBatterySaveMode;
+    setState(() {
+      _isPowerSaveMode = isPowerSaveMode;
+    });
+
+    if (_isPowerSaveMode) {
+      openDialog(
+          // ignore: use_build_context_synchronously
+          context,
+          CupertinoAlertDialog(
+            title: const Text("Peringatan"),
+            content: const Text(
+                "Reminder mungkin tidak dapat berjalan dengan semestinya jika mengaktifkan mode hemat daya, harap matikan mode hemat daya."),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text("Ok"),
+              ),
+            ],
+          ));
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    await Permission.microphone.request();
+    await Permission.speech.request();
+    await Permission.notification.request();
+    await Permission.ignoreBatteryOptimizations.request();
+    await Permission.scheduleExactAlarm.request();
+  }
+
+  Future<void> _requestPermissionsIfNeeded() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      var permissionRequested = prefs.getBool('permission_requested');
+
+      if (permissionRequested == null) {
+        await _requestPermissions();
+        await prefs.setBool('permission_requested', true);
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print(e);
+    }
   }
 
   void _onItemTapped(int index) {
@@ -72,8 +129,9 @@ class _LayoutState extends State<Layout> {
 
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();
-    await const FlutterSecureStorage().delete(key: "token");
-    await const FlutterSecureStorage().delete(key: "user_uid");
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove("token");
+    await prefs.remove("user_uid");
 
     Navigator.pushAndRemoveUntil(
       // ignore: use_build_context_synchronously

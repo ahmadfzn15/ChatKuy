@@ -7,8 +7,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:chat/chat.dart';
 import 'package:chat/etc/format_time.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key, required this.user});
@@ -47,32 +45,12 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
 
-    _requestPermissionsIfNeeded();
     dataSnapshot = FirebaseFirestore.instance
         .collection('chatRoom')
         .where("participants", arrayContains: widget.user!.uid)
         .where("active", isEqualTo: true)
         .orderBy("updated_at", descending: true)
         .snapshots();
-  }
-
-  Future<void> _requestPermissions() async {
-    await Permission.microphone.request();
-    await Permission.speech.request();
-    await Permission.notification.request();
-    await Permission.ignoreBatteryOptimizations.request();
-    await Permission.scheduleExactAlarm.request();
-  }
-
-  Future<void> _requestPermissionsIfNeeded() async {
-    const storage = FlutterSecureStorage();
-    String? permissionRequested =
-        await storage.read(key: 'permission_requested');
-
-    if (permissionRequested == null) {
-      await _requestPermissions();
-      await storage.write(key: 'permission_requested', value: 'true');
-    }
   }
 
   Future<Map<String, dynamic>> getUser(Map<String, dynamic> chatRoom) async {

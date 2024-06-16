@@ -23,7 +23,7 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
     private var isListening = false
     private lateinit var speechIntent: Intent
     private lateinit var wakeLock: PowerManager.WakeLock
-    private val WAKELOCK_TIMEOUT: Long = 10 * 60 * 1000L
+    private val WAKELOCK_TIMEOUT: Long = 1000 * 60 * 1000L
 
     override fun onCreate() {
         super.onCreate()
@@ -67,10 +67,10 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
             saveAlarm(this, intent.getIntExtra("hour", 0), intent.getIntExtra("minute", 0), title, message, stopMessage ?: "", repeatDays, requestCode)
         }
 
-        startSpeechRecognition()
-        loopMessage()
-        startVibration()
-        turnOnScreen()
+        if (isTTSInitialized) {
+            startAlarmFunctions()
+        }
+
         return START_STICKY
     }
 
@@ -79,10 +79,17 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
             isTTSInitialized = true
             textToSpeech.language = Locale("id", "ID")
             Log.d("AlarmService", "TTS Initialized")
-            if (shouldLoop) loopMessage()
+            startAlarmFunctions()
         } else {
             Log.e("TextToSpeech", "Initialization failed")
         }
+    }
+
+    private fun startAlarmFunctions() {
+        startSpeechRecognition()
+        loopMessage()
+        startVibration()
+        turnOnScreen()
     }
 
     override fun onDestroy() {
@@ -101,7 +108,7 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
             val serviceChannel = NotificationChannel(
                 CHANNEL_ID,
                 "Alarm Service Channel",
-                NotificationManager.IMPORTANCE_MAX
+                NotificationManager.IMPORTANCE_HIGH
             )
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(serviceChannel)
@@ -177,7 +184,7 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
     private fun loopMessage() {
         if (shouldLoop && isTTSInitialized) {
             textToSpeech.speak(messageToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
-            
+
             val words = messageToSpeak?.split(" ")?.size ?: 0
             val stop = stopMessage?.split(" ")?.size ?: 0
             val wordsPerMinute = 150.0
@@ -217,15 +224,13 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
 
     private fun turnOnScreen() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (powerManager != null) {
-            val screenWakeLock = powerManager.newWakeLock(
-                PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                        PowerManager.FULL_WAKE_LOCK or
-                        PowerManager.ON_AFTER_RELEASE,
-                "MyApp::AlarmScreenWakeLockTag"
-            )
-            screenWakeLock.acquire(10 * 60 * 1000L)
-        }
+        val screenWakeLock = powerManager.newWakeLock(
+            PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                    PowerManager.FULL_WAKE_LOCK or
+                    PowerManager.ON_AFTER_RELEASE,
+            "MyApp::AlarmScreenWakeLockTag"
+        )
+        screenWakeLock.acquire(10 * 60 * 1000L)
     }
 
     private fun stopAlarm() {

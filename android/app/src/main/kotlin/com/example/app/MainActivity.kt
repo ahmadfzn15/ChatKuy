@@ -1,12 +1,16 @@
 package com.example.app
 
 import android.app.AlarmManager
-import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
-import android.os.Bundle
+import android.net.Uri
 import androidx.work.*
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.content.Context
+import android.os.PowerManager
 import androidx.annotation.NonNull
+import android.app.PendingIntent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.*
 import io.flutter.embedding.engine.dart.DartExecutor
@@ -23,6 +27,17 @@ class MainActivity : FlutterActivity() {
             DartExecutor.DartEntrypoint.createDefault()
         )
         FlutterEngineCache.getInstance().put("my_engine_id", flutterEngine)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val intent = Intent()
+            val packageName = packageName
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                intent.action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            }
+        }
     }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
@@ -43,6 +58,9 @@ class MainActivity : FlutterActivity() {
                 val id = call.argument<Int>("requestCode")!!
                 cancelAlarm(id)
                 result.success(null)
+            } else if (call.method == "isInPowerSaveMode") {
+                var isInPowerSaveMode = isPowerSaveMode();
+                result.success(isInPowerSaveMode);
             } else {
                 result.notImplemented()
             }
@@ -73,5 +91,13 @@ class MainActivity : FlutterActivity() {
     private fun cancelAlarm(id: Int) {
         WorkManager.getInstance(this).cancelAllWorkByTag(id.toString())
     }
-}
 
+    private fun isPowerSaveMode(): Boolean {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            powerManager.isPowerSaveMode
+        } else {
+            false
+        }
+    }
+}

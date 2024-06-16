@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:chat/components/popup.dart';
 
 class Register extends StatefulWidget {
@@ -21,7 +20,6 @@ class _RegisterState extends State<Register> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordControllerConfirmation =
       TextEditingController();
-  final FlutterSecureStorage storage = const FlutterSecureStorage();
   bool loading = false;
   bool pwdNotSame = false;
   bool showPwd = false;

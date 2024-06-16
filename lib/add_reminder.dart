@@ -54,7 +54,7 @@ class _AddReminderState extends State<AddReminder> {
     showCupertinoModalPopup<void>(
       context: context,
       builder: (BuildContext context) => Container(
-        height: 300,
+        height: 500,
         padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 10),
         margin: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -230,7 +230,7 @@ class _AddReminderState extends State<AddReminder> {
                               },
                             ),
                             SizedBox(
-                              height: 200,
+                              height: 500,
                               child: ListView.builder(
                                 itemCount: days.length,
                                 itemBuilder: (context, index) {

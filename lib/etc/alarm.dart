@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Alarm {
   static const platform = MethodChannel('com.example.app/alarm');
 
   Future<void> scheduleAllAlarms() async {
     try {
-      var uid = await const FlutterSecureStorage().read(key: 'user_uid');
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      var uid = prefs.getString('user_uid');
 
       if (uid!.isNotEmpty) {
         QuerySnapshot snapshot = await FirebaseFirestore.instance
@@ -38,6 +39,9 @@ class Alarm {
           // ignore: avoid_print
           print("Scheduler successfully for ${data['event']}");
         }
+      } else {
+        // ignore: avoid_print
+        print("uid is empty");
       }
     } on PlatformException catch (e) {
       // ignore: avoid_print

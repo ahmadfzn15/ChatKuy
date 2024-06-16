@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:chat/etc/format_time.dart';
-import 'package:chat/etc/messaging.dart';
 
 class Chat extends StatefulWidget {
   const Chat(
@@ -114,10 +113,10 @@ class _ChatState extends State<Chat> {
         fetchMessages();
         await updateStatusRoom();
 
-        await Messaging().sendNotif(
-            "dK5A7R4cSKa08MtHIf45LI:APA91bHtTPx2cxO9rIWauTTVRvUvm_Uaa-Df8byKnVejA6TRx_LrW7sx3b0Usnr3tp-2YGlG0Lk0FDRVtQw-ypvZLN_p61XG1oF-txZTxu3Mn90nn7IZj6sP5P-UUFT2mnrp4p4vYV9k",
-            "Ahmad Fauzan",
-            _message.text);
+        // await Messaging().sendNotif(
+        //     "dK5A7R4cSKa08MtHIf45LI:APA91bHtTPx2cxO9rIWauTTVRvUvm_Uaa-Df8byKnVejA6TRx_LrW7sx3b0Usnr3tp-2YGlG0Lk0FDRVtQw-ypvZLN_p61XG1oF-txZTxu3Mn90nn7IZj6sP5P-UUFT2mnrp4p4vYV9k",
+        //     "Ahmad Fauzan",
+        //     _message.text);
       });
     }
   }

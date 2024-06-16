@@ -1,9 +1,9 @@
 import 'package:chat/etc/alarm.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:chat/components/popup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReminderController extends GetxController {
   RxList<Map<String, dynamic>> data = <Map<String, dynamic>>[].obs;
@@ -21,7 +21,8 @@ class ReminderController extends GetxController {
 
   Future<void> fetchData() async {
     try {
-      var uid = await const FlutterSecureStorage().read(key: 'user_uid');
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      var uid = prefs.getString('user_uid');
 
       var res = await FirebaseFirestore.instance
           .collection("reminder")

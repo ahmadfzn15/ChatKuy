@@ -18,7 +18,7 @@ class _AuthState extends State<Auth> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.orange,
+      backgroundColor: Colors.purple,
       key: _scaffoldKey,
       body: PageView(
           controller: _pageController,

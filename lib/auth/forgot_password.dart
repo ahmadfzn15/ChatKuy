@@ -85,7 +85,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         child: SizedBox(
           width: double.infinity,
           child: CupertinoButton(
-              color: Colors.orange,
+              color: Colors.purple,
               onPressed: () {
                 sendEmail();
               },

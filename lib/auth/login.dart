@@ -1,11 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:chat/components/popup.dart';
 import 'package:chat/layout.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key, required this.pageController});
@@ -41,7 +39,6 @@ class _LoginState extends State<Login> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FlutterSecureStorage storage = const FlutterSecureStorage();
   bool loading = false;
   bool showPwd = false;
 
@@ -68,9 +65,10 @@ class _LoginState extends State<Login> {
         });
         if (user.emailVerified) {
           final String? token = await user.getIdToken();
-          await storage.write(key: "token", value: token);
-          await storage.write(key: "user_uid", value: user.uid);
-          saveTokenToDatabase(user.uid);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString("token", token!);
+          await prefs.setString("user_uid", user.uid);
+          // saveTokenToDatabase(user.uid);
 
           Navigator.pushAndRemoveUntil(
             // ignore: use_build_context_synchronously
@@ -109,7 +107,8 @@ class _LoginState extends State<Login> {
         loading = false;
       });
       // ignore: use_build_context_synchronously
-      Popup().show(context, "An unexpected error occurred", false);
+      Popup().show(context,
+          "Check your internet connection or restart the application.", false);
     }
   }
 
@@ -140,23 +139,23 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Future<void> saveTokenToDatabase(String userId) async {
-    String? token = await FirebaseMessaging.instance.getToken();
+  // Future<void> saveTokenToDatabase(String userId) async {
+  //   String? token = await FirebaseMessaging.instance.getToken();
 
-    if (token != null) {
-      var tokensRef = await FirebaseFirestore.instance
-          .collection('users')
-          .where("uid", isEqualTo: userId)
-          .get();
+  //   if (token != null) {
+  //     var tokensRef = await FirebaseFirestore.instance
+  //         .collection('users')
+  //         .where("uid", isEqualTo: userId)
+  //         .get();
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(tokensRef.docs.first.id)
-          .update({
-        'fcmToken': FieldValue.arrayUnion([token]),
-      });
-    }
-  }
+  //     await FirebaseFirestore.instance
+  //         .collection('users')
+  //         .doc(tokensRef.docs.first.id)
+  //         .update({
+  //       'fcmToken': FieldValue.arrayUnion([token]),
+  //     });
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
