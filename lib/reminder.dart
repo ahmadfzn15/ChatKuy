@@ -35,7 +35,7 @@ class _ReminderState extends State<Reminder> {
           .collection("reminder")
           .doc(id)
           .update({"active": status});
-      reminderController.onInit();
+      await reminderController.fetchData();
     } catch (e) {
       reminderController.data[index]['active'] = !status;
     }

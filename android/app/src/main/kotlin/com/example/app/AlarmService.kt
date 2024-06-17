@@ -45,10 +45,10 @@ class AlarmService : Service(), TextToSpeech.OnInitListener {
         stopMessage = intent?.getStringExtra("stop_message")
 
         val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(this, requestCode, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getActivity(this, requestCode, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         val stopIntent = Intent(this, AlarmStopReceiver::class.java)
-        val stopPendingIntent = PendingIntent.getBroadcast(this, requestCode, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val stopPendingIntent = PendingIntent.getBroadcast(this, requestCode, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
