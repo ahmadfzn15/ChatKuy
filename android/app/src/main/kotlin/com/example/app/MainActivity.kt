@@ -1,16 +1,16 @@
 package com.example.app
 
 import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.work.*
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
-import android.content.Context
 import android.os.PowerManager
+import android.provider.Settings
 import androidx.annotation.NonNull
-import android.app.PendingIntent
+import androidx.work.*
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.*
 import io.flutter.embedding.engine.dart.DartExecutor
@@ -24,7 +24,7 @@ class MainActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         val flutterEngine = FlutterEngine(this)
         flutterEngine.dartExecutor.executeDartEntrypoint(
-            DartExecutor.DartEntrypoint.createDefault()
+                DartExecutor.DartEntrypoint.createDefault()
         )
         FlutterEngineCache.getInstance().put("my_engine_id", flutterEngine)
 
@@ -42,7 +42,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
+                call,
+                result ->
             if (call.method == "scheduleAlarm") {
                 val requestCode = call.argument<Int>("requestCode")!!
                 val hour = call.argument<Int>("hour")!!
@@ -59,15 +61,23 @@ class MainActivity : FlutterActivity() {
                 cancelAlarm(id)
                 result.success(null)
             } else if (call.method == "isInPowerSaveMode") {
-                var isInPowerSaveMode = isPowerSaveMode();
-                result.success(isInPowerSaveMode);
+                var isInPowerSaveMode = isPowerSaveMode()
+                result.success(isInPowerSaveMode)
             } else {
                 result.notImplemented()
             }
         }
     }
 
-    private fun scheduleAlarm(requestCode: Int, hour: Int, minute: Int, title: String, message: String, stopMessage: String, repeat: List<Int>) {
+    private fun scheduleAlarm(
+            requestCode: Int,
+            hour: Int,
+            minute: Int,
+            title: String,
+            message: String,
+            stopMessage: String,
+            repeat: List<Int>
+    ) {
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, hour)
         calendar.set(Calendar.MINUTE, minute)
@@ -76,16 +86,27 @@ class MainActivity : FlutterActivity() {
             calendar.add(Calendar.DAY_OF_YEAR, 1)
         }
 
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra("requestCode", requestCode)
-            putExtra("title", title)
-            putExtra("message", message)
-            putExtra("stop_message", stopMessage)
-            putIntegerArrayListExtra("repeat", ArrayList(repeat))
-        }
-        val pendingIntent = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val intent =
+                Intent(context, AlarmReceiver::class.java).apply {
+                    putExtra("requestCode", requestCode)
+                    putExtra("title", title)
+                    putExtra("message", message)
+                    putExtra("stop_message", stopMessage)
+                    putIntegerArrayListExtra("repeat", ArrayList(repeat))
+                }
+        val pendingIntent =
+                PendingIntent.getBroadcast(
+                        context,
+                        requestCode,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+        alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                pendingIntent
+        )
     }
 
     private fun cancelAlarm(id: Int) {
@@ -94,7 +115,7 @@ class MainActivity : FlutterActivity() {
 
     private fun isPowerSaveMode(): Boolean {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             powerManager.isPowerSaveMode
         } else {
             false

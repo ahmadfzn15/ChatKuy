@@ -2,8 +2,6 @@ package com.example.app
 
 import android.app.Service
 import android.content.Intent
-import android.media.AudioFormat
-import android.media.MediaRecorder
 import android.os.*
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -27,7 +25,11 @@ class SpeechRecognitionService : Service(), RecognitionListener {
 
         val flutterEngine: FlutterEngine? = FlutterEngineCache.getInstance().get("my_engine_id")
         if (flutterEngine != null) {
-            methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.example.app/alarm")
+            methodChannel =
+                    MethodChannel(
+                            flutterEngine.dartExecutor.binaryMessenger,
+                            "com.example.app/alarm"
+                    )
         } else {
             Log.e("SpeechRecogService", "Flutter engine is null")
         }
@@ -47,10 +49,14 @@ class SpeechRecognitionService : Service(), RecognitionListener {
 
     private fun startListening() {
         if (!isListening) {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
-            }
+            val intent =
+                    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(
+                                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                        )
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
+                    }
             speechRecognizer.startListening(intent)
             isListening = true
         }
@@ -111,7 +117,7 @@ class SpeechRecognitionService : Service(), RecognitionListener {
         stopSelf()
         speechRecognizer.destroy()
     }
-        
+
     override fun onDestroy() {
         super.onDestroy()
         stopListeningAndShutdown()

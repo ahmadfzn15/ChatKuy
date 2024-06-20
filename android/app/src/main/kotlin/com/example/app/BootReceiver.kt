@@ -1,16 +1,16 @@
 package com.example.app
 
 import android.content.BroadcastReceiver
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import org.json.JSONArray
 import java.util.*
+import org.json.JSONArray
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
+                        intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED
+        ) {
             resetAlarms(context)
         }
     }
@@ -34,15 +34,16 @@ class BootReceiver : BroadcastReceiver() {
                 repeatDays.add(repeatDaysArray.getInt(j))
             }
 
-            val alarmServiceIntent = Intent(context, AlarmService::class.java).apply {
-                putExtra("title", title)
-                putExtra("message", message)
-                putExtra("stop_message", stopMessage)
-                putIntegerArrayListExtra("repeat", repeatDays)
-                putExtra("requestCode", requestCode)
-                putExtra("hour", hour)
-                putExtra("minute", minute)
-            }
+            val alarmServiceIntent =
+                    Intent(context, AlarmService::class.java).apply {
+                        putExtra("title", title)
+                        putExtra("message", message)
+                        putExtra("stop_message", stopMessage)
+                        putIntegerArrayListExtra("repeat", repeatDays)
+                        putExtra("requestCode", requestCode)
+                        putExtra("hour", hour)
+                        putExtra("minute", minute)
+                    }
             context.startForegroundService(alarmServiceIntent)
         }
     }

@@ -1,4 +1,5 @@
 import 'package:battery_plus/battery_plus.dart';
+import 'package:chat/etc/alarm.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -55,12 +56,22 @@ class _LayoutState extends State<Layout> {
   void initState() {
     super.initState();
 
+    initializeAsyncTasks();
     _requestPermissionsIfNeeded();
     _checkPowerSaveMode();
     page = [
       Reminder(user: widget.user),
       Home(user: widget.user),
     ];
+  }
+
+  Future<void> initializeAsyncTasks() async {
+    try {
+      await Alarm().scheduleAllAlarms();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error during async tasks initialization: $e');
+    }
   }
 
   Future<void> _checkPowerSaveMode() async {
@@ -94,6 +105,7 @@ class _LayoutState extends State<Layout> {
     await Permission.microphone.request();
     await Permission.speech.request();
     await Permission.notification.request();
+    await Permission.locationWhenInUse.request();
     await Permission.ignoreBatteryOptimizations.request();
     await Permission.scheduleExactAlarm.request();
   }

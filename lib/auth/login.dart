@@ -106,9 +106,25 @@ class _LoginState extends State<Login> {
         _passwordController.clear();
         loading = false;
       });
-      // ignore: use_build_context_synchronously
-      Popup().show(context,
-          "Check your internet connection or restart the application.", false);
+
+      if (e is FirebaseAuthException) {
+        if (e.code == 'user-not-found') {
+          // ignore: use_build_context_synchronously
+          Popup().show(context, "User not found. Check your email.", false);
+        } else if (e.code == 'wrong-password') {
+          // ignore: use_build_context_synchronously
+          Popup().show(context, "Wrong password. Please try again.", false);
+        } else {
+          // ignore: use_build_context_synchronously
+          Popup().show(context, "Firebase error: ${e.message}", false);
+        }
+      } else {
+        Popup().show(
+            // ignore: use_build_context_synchronously
+            context,
+            "Check your internet connection or restart the application.",
+            false);
+      }
     }
   }
 

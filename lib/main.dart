@@ -7,14 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chat/auth/auth.dart';
 import 'package:chat/layout.dart';
 import 'package:chat/etc/startup.dart';
-import 'package:chat/etc/alarm.dart';
 import 'package:chat/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-
   await initializeFirebase();
 
   runApp(const MainApp());
@@ -25,7 +23,11 @@ Future<void> initializeFirebase() async {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
-      ).timeout(const Duration(seconds: 5));
+        // ignore: avoid_print
+      ).whenComplete(() => print('Firebase initialized successfully'));
+    } else {
+      // ignore: avoid_print
+      print('Firebase already initialized');
     }
   } catch (e) {
     // ignore: avoid_print
@@ -39,7 +41,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: "ChatKuy",
+      title: "Reminder",
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
       theme: ThemeData(
@@ -47,55 +49,7 @@ class MainApp extends StatelessWidget {
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
       ),
-      home: const FirebaseInitializationScreen(),
-    );
-  }
-}
-
-class FirebaseInitializationScreen extends StatefulWidget {
-  const FirebaseInitializationScreen({super.key});
-
-  @override
-  // ignore: library_private_types_in_public_api
-  _FirebaseInitializationScreenState createState() =>
-      _FirebaseInitializationScreenState();
-}
-
-class _FirebaseInitializationScreenState
-    extends State<FirebaseInitializationScreen> {
-  @override
-  void initState() {
-    super.initState();
-    initializeFirebase().then((_) {
-      setState(() {});
-    }).catchError((e) {
-      retryInitialization();
-    });
-  }
-
-  Future<void> retryInitialization() async {
-    while (true) {
-      try {
-        await initializeFirebase();
-        setState(() {});
-        break;
-      } catch (e) {
-        await Future.delayed(const Duration(seconds: 3));
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: initializeFirebase(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Startup();
-        } else {
-          return const MainAppScreen();
-        }
-      },
+      home: const MainAppScreen(),
     );
   }
 }
@@ -111,21 +65,6 @@ class MainAppScreen extends StatefulWidget {
 class _MainAppScreenState extends State<MainAppScreen>
     with WidgetsBindingObserver {
   ThemeMode themeMode = ThemeMode.system;
-
-  @override
-  void initState() {
-    super.initState();
-    initializeAsyncTasks();
-  }
-
-  Future<void> initializeAsyncTasks() async {
-    try {
-      await Alarm().scheduleAllAlarms();
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error during async tasks initialization: $e');
-    }
-  }
 
   Future<void> saveUserUID(String uid) async {
     try {
